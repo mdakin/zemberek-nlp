@@ -102,7 +102,7 @@ public final class ZemberekDemoServer {
       System.out.println(
           "[ZemberekDemoServer] Loading bundled normalization models from Zemberek resources...");
       SmoothLm sharedLm = SpanLatticePerceptronNormalizer.loadDefaultSmoothLm();
-      perceptron = SpanLatticePerceptronNormalizer.createWithDefaults(morphology, sharedLm);
+      perceptron = SpanLatticePerceptronNormalizer.createWithDefaults(morphology);
       zemberekHead = TurkishSentenceNormalizer.createWithDefaults(morphology, sharedLm);
     } else {
       SmoothLm lm;
@@ -120,14 +120,14 @@ public final class ZemberekDemoServer {
           modelDirOverride != null
               ? SpanLatticePerceptronNormalizer.load(
                   morphology,
-                  lm,
+                  null,
                   Files.exists(modelDirOverride.resolve("knowledge.bin.gz"))
                       ? modelDirOverride.resolve("knowledge.bin.gz")
                       : modelDirOverride.resolve("knowledge.bin"),
                   Files.exists(modelDirOverride.resolve("perceptron.bin.gz"))
                       ? modelDirOverride.resolve("perceptron.bin.gz")
                       : modelDirOverride.resolve("perceptron.bin"))
-              : SpanLatticePerceptronNormalizer.createWithDefaults(morphology, lm);
+              : SpanLatticePerceptronNormalizer.createWithDefaults(morphology);
     }
 
     System.out.printf(

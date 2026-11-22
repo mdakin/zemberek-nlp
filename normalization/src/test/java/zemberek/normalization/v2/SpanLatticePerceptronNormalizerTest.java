@@ -157,6 +157,9 @@ public class SpanLatticePerceptronNormalizerTest {
 
     Assert.assertTrue(loaded.activeSparseFeatureCount() > 100_000);
     Assert.assertEquals("Selam bugün geliyor musun :)", loaded.normalize("Slm bugun geliyomusun :)"));
+    Assert.assertEquals(
+        "Selam bugün geliyor musun? Yarın 14'te görüşürüz.",
+        loaded.normalize("Slm bugun geliyomusun? yarin 14te gorusuruz."));
     Assert.assertEquals("Bu sistem alınır mı?", loaded.normalize("Bu sistem alınır mi?"));
     Assert.assertEquals(
         "yarın ben de geleceğim ama saat 7'de orada olur musun bilmiyorum",
