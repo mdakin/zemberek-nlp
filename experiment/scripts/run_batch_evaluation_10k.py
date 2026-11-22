@@ -1,0 +1,452 @@
+#!/usr/bin/env python3
+"""
+Batch API Evaluation Runner for 10K Disambiguation Dataset.
+Uses Gemini 3.8 Flash Batch API (batchGenerateContent) with thinking budget 500
+and dual candidate representations (Oflazer style + Zemberek native tags).
+Supports incremental chunking, automatic registry tracking, checkpointing, and resume.
+"""
+
+import os
+import sys
+import json
+import time
+import argparse
+import requests
+from typing import Dict, Any, List, Optional, Tuple
+
+SYSTEM_INSTRUCTION = (
+    "You are an expert Turkish computational linguist specialized in morphological disambiguation. "
+    "Select the single most accurate morphological analysis ID for each ambiguous word in the given sentence context. "
+    "Return only valid JSON mapping token index string to candidate ID integer. Example: {\"0\": 3, \"1\": 0}"
+)
+
+# Critical datasets that must NEVER be overwritten
+PROTECTED_FILES = [
+    os.path.realpath("/home/dndara/data/turkish/distilled/distilled_10k_annotated.jsonl"),
+    os.path.realpath("/home/dndara/data/turkish/distilled/distilled_20k_annotated.jsonl"),
+    os.path.realpath("/home/dndara/data/turkish/distilled/distilled_batch2_10k_annotated.jsonl"),
+    os.path.realpath("/home/dndara/data/turkish/distilled/distilled_batch3_10k_annotated.jsonl"),
+    os.path.realpath("/home/dndara/data/turkish/distilled/golden_test_1000_annotated.jsonl"),
+    os.path.realpath("/home/dndara/data/turkish/distilled/golden_test_1000_canonical.jsonl"),
+    os.path.realpath("/home/dndara/data/turkish/distilled/golden_test_2500_annotated.jsonl"),
+    os.path.realpath("/home/dndara/data/turkish/distilled/golden_test_2500_canonical.jsonl"),
+    os.path.realpath("data/ambiguity/train_combined_30k.jsonl"),
+    os.path.realpath("data/ambiguity/train_combined_33k.jsonl"),
+]
+
+
+def format_enriched_prompt(record: Dict[str, Any], prune_noise: bool = True) -> str:
+    """Builds prompt containing both Oflazer style and Zemberek native analysis."""
+    sentence = record["text"]
+    ambiguous_tokens = [t for t in record["tokens"] if t.get("is_ambiguous", False)]
+
+    lines = [
+        f'Sentence: "{sentence}"',
+        "Select correct candidate ID for each ambiguous word:"
+    ]
+
+    for t in ambiguous_tokens:
+        cands = t.get("candidates", [])
+        if prune_noise and cands:
+            top_score = max(c.get("score", 0.0) for c in cands)
+            pruned = [c for c in cands if c.get("score", 0.0) >= top_score - 15.0]
+            if pruned:
+                cands = pruned
+
+        cands_str = "  ".join(
+            f"[{c['id']}] {c.get('oflazer_style', '')} (Zemberek: {c.get('zemberek_key', '')})"
+            for c in cands
+        )
+        lines.append(f"- #{t['index']} \"{t['surface']}\": {cands_str}")
+
+    lines.append('Return JSON: {"<index>": <chosen_id>}')
+    return "\n".join(lines)
+
+
+def build_batch_request(
+    records: List[Dict[str, Any]],
+    batch_display_name: str,
+    thinking_budget: int = 500
+) -> Dict[str, Any]:
+    requests_list = []
+    for r in records:
+        prompt = format_enriched_prompt(r)
+        req_item = {
+            "request": {
+                "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": 0.0,
+                    "responseMimeType": "application/json",
+                    "thinkingConfig": {"thinkingBudget": thinking_budget}
+                }
+            }
+        }
+        requests_list.append(req_item)
+
+    return {
+        "batch": {
+            "displayName": batch_display_name,
+            "inputConfig": {
+                "requests": {
+                    "requests": requests_list
+                }
+            }
+        }
+    }
+
+
+def submit_batch(
+    api_key: str,
+    payload: Dict[str, Any],
+    model: str = "gemini-3.8-flash",
+    max_retries: int = 5
+) -> Dict[str, Any]:
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:batchGenerateContent?key={api_key}"
+    for attempt in range(max_retries):
+        try:
+            resp = requests.post(url, json=payload, timeout=60)
+            if resp.status_code == 200:
+                return resp.json()
+            elif resp.status_code == 429:
+                wait_time = (2 ** attempt) * 2.0
+                print(f"    [Rate limit 429] Backing off for {wait_time:.1f}s...")
+                time.sleep(wait_time)
+            else:
+                raise RuntimeError(f"Failed to submit batch (HTTP {resp.status_code}): {resp.text}")
+        except requests.exceptions.RequestException as e:
+            if attempt == max_retries - 1:
+                raise
+            time.sleep(2 ** attempt)
+    raise RuntimeError("Max retries exceeded when submitting batch.")
+
+
+def get_batch_status(
+    api_key: str,
+    batch_name: str,
+    max_retries: int = 3
+) -> Dict[str, Any]:
+    url = f"https://generativelanguage.googleapis.com/v1beta/{batch_name}?key={api_key}"
+    for attempt in range(max_retries):
+        try:
+            resp = requests.get(url, timeout=30)
+            if resp.status_code == 200:
+                return resp.json()
+            elif resp.status_code == 429:
+                time.sleep((2 ** attempt) * 2.0)
+            else:
+                raise RuntimeError(f"Failed to get batch status for {batch_name} (HTTP {resp.status_code}): {resp.text}")
+        except requests.exceptions.RequestException:
+            if attempt == max_retries - 1:
+                raise
+            time.sleep(2 ** attempt)
+    raise RuntimeError(f"Max retries exceeded getting status for {batch_name}")
+
+
+def parse_json(text: Optional[str]) -> Optional[Dict[str, int]]:
+    if not text:
+        return None
+    cleaned = text.strip()
+    if cleaned.startswith("```json"):
+        cleaned = cleaned[7:]
+    elif cleaned.startswith("```"):
+        cleaned = cleaned[3:]
+    if cleaned.endswith("```"):
+        cleaned = cleaned[:-3]
+    cleaned = cleaned.strip()
+
+    try:
+        data = json.loads(cleaned)
+        return {str(k): int(v) for k, v in data.items()}
+    except Exception:
+        return None
+
+
+def load_registry(registry_path: str) -> Dict[str, Any]:
+    if os.path.exists(registry_path):
+        try:
+            with open(registry_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"batches": [], "completed_sentence_ids": []}
+
+
+def save_registry(registry_path: str, data: Dict[str, Any]):
+    os.makedirs(os.path.dirname(os.path.abspath(registry_path)), exist_ok=True)
+    temp_path = registry_path + ".tmp"
+    with open(temp_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+    os.replace(temp_path, registry_path)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Gemini Batch API Disambiguation Evaluator")
+    parser.add_argument("--input", default="/home/dndara/data/turkish/distilled/distilled_10k_annotated.jsonl", help="Input JSONL")
+    parser.add_argument("--output", default="data/ambiguity/distilled_10k_thinking500_annotated.jsonl", help="Output annotated JSONL")
+    parser.add_argument("--registry", default="data/ambiguity/batch_registry_10k_thinking500.json", help="Batch tracking registry")
+    parser.add_argument("--summary", default="data/ambiguity/distilled_10k_thinking500_summary.json", help="Summary report")
+    parser.add_argument("--model", default="gemini-3.8-flash", help="Gemini model")
+    parser.add_argument("--batch-size", type=int, default=500, help="Sentences per batch")
+    parser.add_argument("--limit", type=int, default=0, help="Limit total sentences (e.g. 20 for test run)")
+    parser.add_argument("--max-active-batches", type=int, default=5, help="Maximum concurrent active batches")
+    parser.add_argument("--thinking-budget", type=int, default=500, help="Thinking budget")
+    parser.add_argument("--poll-interval", type=int, default=15, help="Seconds between polls")
+    args = parser.parse_args()
+
+    # Strict Overwrite Protection
+    target_out_path = os.path.realpath(args.output)
+    target_in_path = os.path.realpath(args.input)
+    if target_out_path == target_in_path:
+        raise ValueError(f"FATAL: Output file matches input file ({args.output}). Overwriting input is forbidden.")
+    if target_out_path in PROTECTED_FILES:
+        raise ValueError(f"FATAL: Output file ({args.output}) is a protected golden/training dataset. Overwrite is blocked.")
+
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        print("Error: GEMINI_API_KEY environment variable is not set.", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"Loading input dataset: {args.input}")
+    records = []
+    with open(args.input, "r", encoding="utf-8") as f:
+        for idx, line in enumerate(f):
+            if args.limit > 0 and idx >= args.limit:
+                break
+            records.append(json.loads(line))
+
+    total_records = len(records)
+    print(f"Total sentences in scope: {total_records}")
+
+    registry = load_registry(args.registry)
+    completed_ids = set(registry.get("completed_sentence_ids", []))
+    print(f"Already completed sentences in registry: {len(completed_ids)}")
+
+    # Check which sentence IDs are already enqueued in batches
+    enqueued_ids = set(completed_ids)
+    for b in registry.get("batches", []):
+        for sid in b.get("sentence_ids", []):
+            enqueued_ids.add(sid)
+
+    # Group un-enqueued records into chunks
+    unsubmitted_chunks = []
+    current_chunk = []
+    chunk_start_idx = 0
+
+    for idx, r in enumerate(records):
+        sid = r["sentence_id"]
+        if sid in enqueued_ids:
+            continue
+        if not current_chunk:
+            chunk_start_idx = idx
+        current_chunk.append(r)
+        if len(current_chunk) >= args.batch_size:
+            unsubmitted_chunks.append((chunk_start_idx, current_chunk))
+            current_chunk = []
+
+    if current_chunk:
+        unsubmitted_chunks.append((chunk_start_idx, current_chunk))
+
+    print(f"Unsubmitted chunks remaining: {len(unsubmitted_chunks)} ({sum(len(c[1]) for c in unsubmitted_chunks)} sentences)")
+
+    os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
+    completed_out_records = {}
+    if os.path.exists(args.output):
+        with open(args.output, "r", encoding="utf-8") as f:
+            for line in f:
+                item = json.loads(line)
+                completed_out_records[item["sentence_id"]] = item
+
+    record_lookup = {r["sentence_id"]: r for r in records}
+
+    # Main Orchestration Loop (Sliding Window Submission + Polling)
+    print("\nStarting execution loop...")
+    chunk_ptr = 0
+
+    while True:
+        # 1. Check active batches
+        active_batches = [
+            b for b in registry.get("batches", [])
+            if b.get("state") not in ["BATCH_STATE_SUCCEEDED", "BATCH_STATE_FAILED", "BATCH_STATE_CANCELLED"]
+        ]
+
+        # 2. Fill active window with unsubmitted chunks
+        while len(active_batches) < args.max_active_batches and chunk_ptr < len(unsubmitted_chunks):
+            start_idx, chunk_records = unsubmitted_chunks[chunk_ptr]
+            chunk_ptr += 1
+            batch_name_display = f"batch_{start_idx}_{start_idx + len(chunk_records) - 1}_{int(time.time())}"
+            print(f"  Submitting new batch: {batch_name_display} ({len(chunk_records)} sentences)...")
+            try:
+                payload = build_batch_request(chunk_records, batch_name_display, args.thinking_budget)
+                submit_resp = submit_batch(api_key, payload, args.model)
+                batch_id = submit_resp.get("name")
+                print(f"    -> Successfully enqueued as {batch_id}")
+
+                b_entry = {
+                    "name": batch_id,
+                    "displayName": batch_name_display,
+                    "start_idx": start_idx,
+                    "count": len(chunk_records),
+                    "sentence_ids": [r["sentence_id"] for r in chunk_records],
+                    "state": "BATCH_STATE_PENDING",
+                    "create_time": time.time()
+                }
+                registry["batches"].append(b_entry)
+                active_batches.append(b_entry)
+                save_registry(args.registry, registry)
+                time.sleep(1.0)
+            except Exception as e:
+                print(f"    Error submitting chunk: {e}")
+                chunk_ptr -= 1  # retry on next iteration
+                break
+
+        # 3. Poll active batches
+        for b_entry in active_batches:
+            batch_name = b_entry["name"]
+            try:
+                status_data = get_batch_status(api_key, batch_name)
+                state = status_data.get("metadata", {}).get("state", "UNKNOWN")
+                b_entry["state"] = state
+                stats = status_data.get("metadata", {}).get("batchStats", {})
+                print(f"  [{time.strftime('%X')}] {batch_name}: state={state} stats={stats}")
+
+                if state == "BATCH_STATE_SUCCEEDED":
+                    print(f"    Processing results for {batch_name}...")
+                    inlined = status_data.get("response", {}).get("inlinedResponses", {}).get("inlinedResponses", [])
+                    s_ids = b_entry["sentence_ids"]
+
+                    for idx, s_id in enumerate(s_ids):
+                        if idx >= len(inlined):
+                            break
+                        item_obj = inlined[idx]
+                        resp_obj = item_obj.get("response", {})
+                        cands = resp_obj.get("candidates", [{}])
+                        gen_text = ""
+                        if cands:
+                            parts = cands[0].get("content", {}).get("parts", [{}])
+                            if parts:
+                                gen_text = parts[0].get("text", "")
+
+                        parsed_selection = parse_json(gen_text)
+                        orig_rec = record_lookup.get(s_id)
+                        if not orig_rec:
+                            continue
+
+                        annotated_rec = json.loads(json.dumps(orig_rec))
+                        annotated_rec["gemini_thinking_500"] = {
+                            "raw_text": gen_text,
+                            "selections": parsed_selection,
+                            "usage": resp_obj.get("usageMetadata", {})
+                        }
+
+                        # Annotate tokens with validation
+                        for t in annotated_rec.get("tokens", []):
+                            if t.get("is_ambiguous", False):
+                                t_idx_str = str(t["index"])
+                                valid_ids = {c["id"] for c in t.get("candidates", [])}
+                                orig_id = t.get("selected_candidate_id") if t.get("selected_candidate_id") is not None else t.get("chosen_id")
+                                t["zero_budget_candidate_id"] = orig_id
+
+                                chosen_id = parsed_selection.get(t_idx_str) if parsed_selection else None
+                                if chosen_id is not None and chosen_id in valid_ids:
+                                    t["selected_candidate_id"] = chosen_id
+                                    t["thinking_chosen_id"] = chosen_id
+                                else:
+                                    # Fallback to original selection if output missing or invalid ID
+                                    t["thinking_chosen_id"] = orig_id
+
+                        completed_out_records[s_id] = annotated_rec
+                        if s_id not in registry["completed_sentence_ids"]:
+                            registry["completed_sentence_ids"].append(s_id)
+
+                    save_registry(args.registry, registry)
+
+                    # Flush completed to output JSONL
+                    with open(args.output, "w", encoding="utf-8") as out_f:
+                        for sid in records:
+                            s = sid["sentence_id"]
+                            if s in completed_out_records:
+                                out_f.write(json.dumps(completed_out_records[s], ensure_ascii=False) + "\n")
+                    print(f"    -> Progress: {len(completed_out_records)}/{total_records} sentences saved to {args.output}")
+
+                elif state in ["BATCH_STATE_FAILED", "BATCH_STATE_CANCELLED"]:
+                    print(f"    Batch {batch_name} ended with state: {state}")
+                    save_registry(args.registry, registry)
+
+            except Exception as e:
+                print(f"    Error polling {batch_name}: {e}")
+
+        # 4. Check termination condition
+        active_remaining = [
+            b for b in registry.get("batches", [])
+            if b.get("state") not in ["BATCH_STATE_SUCCEEDED", "BATCH_STATE_FAILED", "BATCH_STATE_CANCELLED"]
+        ]
+        if not active_remaining and chunk_ptr >= len(unsubmitted_chunks):
+            print("\nAll batches have completed!")
+            break
+
+        time.sleep(args.poll_interval)
+
+    # 5. Compute Comprehensive Summary
+    print("\nComputing evaluation summary...")
+    total_ambig = 0
+    matches = 0
+    mismatches = []
+    sent_exact = 0
+
+    for r in records:
+        s_id = r["sentence_id"]
+        rec = completed_out_records.get(s_id)
+        if not rec:
+            continue
+        is_sent_match = True
+        for t in rec.get("tokens", []):
+            if not t.get("is_ambiguous", False):
+                continue
+            total_ambig += 1
+            zero_id = t.get("zero_budget_candidate_id")
+            th_id = t.get("thinking_chosen_id")
+            if zero_id is not None and th_id is not None:
+                if zero_id == th_id:
+                    matches += 1
+                else:
+                    is_sent_match = False
+                    mismatches.append({
+                        "sentence_id": s_id,
+                        "token_index": t["index"],
+                        "surface": t["surface"],
+                        "zero_id": zero_id,
+                        "thinking_id": th_id
+                    })
+        if is_sent_match:
+            sent_exact += 1
+
+    summary = {
+        "model": args.model,
+        "thinking_budget": args.thinking_budget,
+        "batch_mode": True,
+        "total_evaluated_sentences": len(completed_out_records),
+        "total_ambiguous_tokens": total_ambig,
+        "token_matches": matches,
+        "token_mismatches": len(mismatches),
+        "token_agreement_rate": round(matches / max(1, total_ambig) * 100.0, 2),
+        "sentence_exact_matches": sent_exact,
+        "sentence_exact_match_rate": round(sent_exact / max(1, len(completed_out_records)) * 100.0, 2),
+        "mismatches": mismatches
+    }
+
+    with open(args.summary, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2, ensure_ascii=False)
+
+    print(f"\n==========================================")
+    print(f" Batch Evaluation Complete")
+    print(f"==========================================")
+    print(f"  Total Sentences: {summary['total_evaluated_sentences']}")
+    print(f"  Total Ambiguous Tokens: {total_ambig}")
+    print(f"  Matches: {matches} ({summary['token_agreement_rate']}%)")
+    print(f"  Mismatches: {len(mismatches)} ({100.0 - summary['token_agreement_rate']:.2f}%)")
+    print(f"  Summary saved to: {args.summary}")
+    print(f"  Annotated dataset saved to: {args.output}")
+
+if __name__ == "__main__":
+    main()

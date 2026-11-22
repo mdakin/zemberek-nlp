@@ -313,21 +313,21 @@ public class EvaluateAmbiguityModel extends ConsoleApp {
     return 0;
   }
 
-  private static String getCandidateKey(TokenRecord t, int id) {
+  static String getCandidateKey(TokenRecord t, int id) {
     if (t.candidates != null && id >= 0 && id < t.candidates.size()) {
       return t.candidates.get(id).zemberek_key;
     }
     return "";
   }
 
-  private static String getCandidatePos(TokenRecord t, int id) {
+  static String getCandidatePos(TokenRecord t, int id) {
     if (t.candidates != null && id >= 0 && id < t.candidates.size()) {
       return t.candidates.get(id).pos;
     }
     return "Unknown";
   }
 
-  private static int matchAnalysisToCandidateId(TokenRecord t, SingleAnalysis sa) {
+  static int matchAnalysisToCandidateId(TokenRecord t, SingleAnalysis sa) {
     if (t.candidates == null || sa == null) {
       return 0;
     }
@@ -338,6 +338,12 @@ public class EvaluateAmbiguityModel extends ConsoleApp {
       }
     }
     return 0;
+  }
+
+  static boolean isMatch(
+      TokenRecord t, int predId, int goldId, String predKey, String goldKey) {
+    return predId == goldId
+        || (predKey != null && !predKey.isEmpty() && predKey.equals(goldKey));
   }
 
   private static void printSummary(EvaluationReport r) {
