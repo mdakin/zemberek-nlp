@@ -34,7 +34,7 @@ import zemberek.normalization.dataset.DatasetModels.TaskLabels;
 
 /**
  * Split-safe raw corpus ingestion reading exclusively from the unified
- * {@code /home/dndara/data/turkish/normalization/source_corpora/} directory while preserving
+ * {@code ${ZEMBEREK_DATA_DIR:-~/data/turkish}/normalization/source_corpora/} directory while preserving
  * downstream sentiment, star-rating, offense, intent, and topic labels and avoiding sequential
  * prefix bias via deterministic stride/shuffled sampling and per-product/movie caps.
  */

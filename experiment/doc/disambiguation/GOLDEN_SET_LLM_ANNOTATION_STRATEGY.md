@@ -1,21 +1,21 @@
 # Golden Set LLM Annotation Strategy (`GSLA-v2.1`)
 
 **Date:** November 8, 2026  
-**Target Corpus:** `/home/dndara/data/turkish/selected_slices/` (`10` Test Slices $\times 1,000$ + `100` Train Slices $\times 1,000$, strictly `7–15` words/sentence)  
-**Java Candidate Generator:** [`SliceCandidateGenerator.java`](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/morphology/ambiguity/model/SliceCandidateGenerator.java) ([`run_slice_candidate_generator.sh`](file:///home/dndara/work/zemberek-nlp/experiment/scripts/model/run_slice_candidate_generator.sh))  
-**Python Batch Annotator:** [`annotate_slices_batch.py`](file:///home/dndara/work/zemberek-nlp/experiment/scripts/model/annotate_slices_batch.py)  
-**Downstream Trainer:** [`TrainFastAmbiguityModel.java`](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/morphology/ambiguity/dataset/TrainFastAmbiguityModel.java)
+**Target Corpus:** `~/data/turkish/selected_slices/` (`10` Test Slices $\times 1,000$ + `100` Train Slices $\times 1,000$, strictly `7–15` words/sentence)  
+**Java Candidate Generator:** [`SliceCandidateGenerator.java`](experiment/src/main/java/zemberek/morphology/ambiguity/model/SliceCandidateGenerator.java) ([`run_slice_candidate_generator.sh`](experiment/scripts/model/run_slice_candidate_generator.sh))  
+**Python Batch Annotator:** [`annotate_slices_batch.py`](experiment/scripts/model/annotate_slices_batch.py)  
+**Downstream Trainer:** [`TrainFastAmbiguityModel.java`](experiment/src/main/java/zemberek/morphology/ambiguity/dataset/TrainFastAmbiguityModel.java)
 
 ---
 
 ## 1. Investigation of Previous Pipelines & Upgraded JSON Schema (`ZCS-v2.0`)
 
 ### 1.1 Dedicated Multi-Threaded Java Exporter (`SliceCandidateGenerator.java`)
-Instead of spawning the legacy single-threaded `DisambiguationCandidateExtractor` from Python per slice, we created [`SliceCandidateGenerator.java`](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/morphology/ambiguity/model/SliceCandidateGenerator.java) in `zemberek.morphology.ambiguity.model`.
-- It initializes `TurkishMorphology` once and exports **all `110` slices (`110,000` sentences, `1,344,480` tokens, `790,255` ambiguous tokens)** across 16 threads in **8.38 seconds** into `/home/dndara/data/turkish/annotated_slices/{test,train}/candidates/`.
+Instead of spawning the legacy single-threaded `DisambiguationCandidateExtractor` from Python per slice, we created [`SliceCandidateGenerator.java`](experiment/src/main/java/zemberek/morphology/ambiguity/model/SliceCandidateGenerator.java) in `zemberek.morphology.ambiguity.model`.
+- It initializes `TurkishMorphology` once and exports **all `110` slices (`110,000` sentences, `1,344,480` tokens, `790,255` ambiguous tokens)** across 16 threads in **8.38 seconds** into `~/data/turkish/annotated_slices/{test,train}/candidates/`.
 
 ### 1.2 Audit of the JSONL Format: Legacy vs. Upgraded `ZCS-v2.0`
-We audited the legacy `DisambiguationCandidateExtractor` JSON schema and made targeted removals and additions while preserving **100% compatibility** with [`TrainAmbiguityModel.loadDataSetFromJsonl`](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/morphology/ambiguity/dataset/TrainAmbiguityModel.java#L169-L286):
+We audited the legacy `DisambiguationCandidateExtractor` JSON schema and made targeted removals and additions while preserving **100% compatibility** with [`TrainAmbiguityModel.loadDataSetFromJsonl`](experiment/src/main/java/zemberek/morphology/ambiguity/dataset/TrainAmbiguityModel.java#L169-L286):
 
 | Level | Removed (Legacy Bloat) | Added in `ZCS-v2.0` (`SliceCandidateGenerator.java`) | Why It Matters |
 | :--- | :--- | :--- | :--- |
@@ -79,7 +79,7 @@ We audited the legacy `DisambiguationCandidateExtractor` JSON schema and made ta
 You asked a critical question:
 > *"I have questions about your prompt, it is guiding the llm a bit too much? ... can we analyze the prompt, is our guidelines correct? is it too much? too little?"*
 
-We audited every rule in our initial 7-rule prompt against real sentences from `test_slice_001` and `train_slice_001`, and **your suspicion was 100% right**: several positional rules in the initial prompt were **over-guiding the LLM** and would introduce **Instruction-Induced Over-Regularization Errors** when using a strong model like Argon Medium or Argon High.
+We audited every rule in our initial 7-rule prompt against real sentences from `test_slice_001` and `train_slice_001`, and **your suspicion was 100% right**: several positional rules in the initial prompt were **over-guiding the LLM** and would introduce **Instruction-Induced Over-Regularization Errors** when using a strong model like Pro/Flash reasoning models at Medium or High thinking.
 
 ### 2.1 Where the Initial 7-Rule Prompt Guided the LLM Too Much (and Why That Hurts)
 
@@ -112,7 +112,7 @@ While a strong LLM knows **Turkish grammar**, it does **not** automatically know
 
 ### 2.3 The Refined `GSLA-v2.4` System Instruction (Every `"prefer"` Paired With Its `"unless..."` Exception + Forensic Audit Fixes)
 
-By cross-referencing all Top 150 ambiguity signatures and Top 25 `LEXICAL_ONLY_OBSERVABLE` signatures in [`turkish_ambiguity_groups_v3_report.md`](file:///home/dndara/work/zemberek-nlp/experiment/docs/model/turkish_ambiguity_groups_v3_report.md) against `TurkishMorphotactics.java`, `master-dictionary.dict`, `non-tdk.dict`, and all 637 ambiguous tokens in the 100-sentence `test_slice_001` side-by-side evaluation, we paired every `"prefer"` rule with its explicit `"unless..."` boundary condition and eliminated lexicon/morphotactic inconsistencies (plus deduplicated identical `Index:1` candidate strings in `format_zemberek_only_prompt`):
+By cross-referencing all Top 150 ambiguity signatures and Top 25 `LEXICAL_ONLY_OBSERVABLE` signatures in [`turkish_ambiguity_groups_v3_report.md`](experiment/docs/model/turkish_ambiguity_groups_v3_report.md) against `TurkishMorphotactics.java`, `master-dictionary.dict`, `non-tdk.dict`, and all 637 ambiguous tokens in the 100-sentence `test_slice_001` side-by-side evaluation, we paired every `"prefer"` rule with its explicit `"unless..."` boundary condition and eliminated lexicon/morphotactic inconsistencies (plus deduplicated identical `Index:1` candidate strings in `format_zemberek_only_prompt`):
 
 ```text
 Select the single most accurate Zemberek morphological candidate ID for each ambiguous word (#index) in the Turkish sentence.
@@ -144,42 +144,42 @@ Return ONLY valid JSON: {"<token_index>": <candidate_id>}
 
 ---
 
-## 3. Empirical Benchmarks Across `gemini-3.8-flash` and `gemini-4-argon`
+## 3. Empirical Benchmarks Across `gemini-3.8-flash` and `gemini-2.5-flash`
 
 We ran two multi-model pilot experiments:
-1. **`test_slice_001` (`GSLA-v2.2`, `gemini-4-argon` `LOW` vs `MEDIUM` vs `HIGH`)**:
-   - `10` `NATURAL` sentences (`s0001..s0010`, `59` ambiguous tokens) — [`pilot_10_v22_argon_low_med_high.json`](file:///home/dndara/data/turkish/annotated_slices/test/reports/pilot_10_v22_argon_low_med_high.json).
-   - `10` `CHALLENGE` sentences (`s0701..s0710`, `72` ambiguous tokens) — [`pilot_10_challenge_v22_argon_low_med_high.json`](file:///home/dndara/data/turkish/annotated_slices/test/reports/pilot_10_challenge_v22_argon_low_med_high.json).
-2. **`test_slice_002` (`GSLA-v2.3` with `"unless"` clauses, `gemini-3.8-flash` `LOW` & `MEDIUM` vs `gemini-4-argon` `LOW` & `MEDIUM`)**:
-   - `10` sentences (`test_slice_002_s0001..s0010`, `61` ambiguous tokens) — [`pilot_slice2_flash38_vs_argon_v23.json`](file:///home/dndara/data/turkish/annotated_slices/test/reports/pilot_slice2_flash38_vs_argon_v23.json).
+1. **`test_slice_001` (`GSLA-v2.2`, `gemini-2.5-flash` `LOW` vs `MEDIUM` vs `HIGH`)**:
+   - `10` `NATURAL` sentences (`s0001..s0010`, `59` ambiguous tokens) — `pilot_10_v22_low_med_high.json`.
+   - `10` `CHALLENGE` sentences (`s0701..s0710`, `72` ambiguous tokens) — `pilot_10_challenge_v22_low_med_high.json`.
+2. **`test_slice_002` (`GSLA-v2.3` with `"unless"` clauses, `gemini-3.8-flash` `LOW` & `MEDIUM` vs `gemini-2.5-flash` `LOW` & `MEDIUM`)**:
+   - `10` sentences (`test_slice_002_s0001..s0010`, `61` ambiguous tokens) — `pilot_slice2_flash_vs_teacher_v23.json`.
 
-### 3.1 `test_slice_002` (`s0001..s0010`, `61` Ambiguous Tokens) — `gemini-3.8-flash` vs `gemini-4-argon` (`GSLA-v2.3`)
+### 3.1 `test_slice_002` (`s0001..s0010`, `61` Ambiguous Tokens) — `gemini-3.8-flash` vs `gemini-2.5-flash` (`GSLA-v2.3`)
 
-| Model & `thinkingLevel` | 10-Sent Parallel Wall Time | `promptTokenCount` (`10` sents) | `candidatesTokenCount` (JSON, `10` sents) | **`thoughtsTokenCount` (`10` sents)** | Total Billed Output / Sent | Agreement with `Argon MEDIUM` | Agreement with `Argon LOW` |
+| Model & `thinkingLevel` | 10-Sent Parallel Wall Time | `promptTokenCount` (`10` sents) | `candidatesTokenCount` (JSON, `10` sents) | **`thoughtsTokenCount` (`10` sents)** | Total Billed Output / Sent | Agreement with `Teacher MEDIUM` | Agreement with `Teacher LOW` |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | **`gemini-3.8-flash` `LOW`** | **`5.08s`** | `26,217` (`2,622`/s) | `513` (`51.3`/s) | **`0`** | **`51.3` / sent** | `58 / 61` (`95.08%`) | `57 / 61` (`93.44%`) |
 | **`gemini-3.8-flash` `MEDIUM`** | **`15.46s`** | `26,217` (`2,622`/s) | `513` (`51.3`/s) | **`7,383` (`738.3`/s)** | **`789.6` / sent** | **`59 / 61` (`96.72%`)** | **`59 / 61` (`96.72%`)** |
-| **`gemini-4-argon` `LOW`** | `69.09s` | `26,846` (`2,685`/s) | `411` (`41.1`/s) | **`0`** | **`41.1` / sent** | **`59 / 61` (`96.72%`)** | `61 / 61` (`100.00%`) |
-| **`gemini-4-argon` `MEDIUM`** | `21.19s` | `26,846` (`2,685`/s, `cached=531`) | `411` (`41.1`/s) | **`0`** | **`41.1` / sent** | `61 / 61` (`100.00%`) | **`59 / 61` (`96.72%`)** |
+| **`gemini-2.5-flash` `LOW`** | `69.09s` | `26,846` (`2,685`/s) | `411` (`41.1`/s) | **`0`** | **`41.1` / sent** | **`59 / 61` (`96.72%`)** | `61 / 61` (`100.00%`) |
+| **`gemini-2.5-flash` `MEDIUM`** | `21.19s` | `26,846` (`2,685`/s, `cached=531`) | `411` (`41.1`/s) | **`0`** | **`41.1` / sent** | `61 / 61` (`100.00%`) | **`59 / 61` (`96.72%`)** |
 
 **Key Empirical Findings from `test_slice_002`:**
-1. **Unanimous Agreement on `57 / 61` (`93.44%`) and `59 / 61` (`96.72%`) Agreement Between `gemini-3.8-flash` `MEDIUM` and `gemini-4-argon`**:
+1. **Unanimous Agreement on `57 / 61` (`93.44%`) and `59 / 61` (`96.72%`) Agreement Between `gemini-3.8-flash` `MEDIUM` and `gemini-2.5-flash`**:
    - All 4 configurations agreed unanimously on 57 of 61 ambiguous tokens, including nested 3-noun compounds (`s0006`: `Müşteri:Noun+A3sg` + `hizmet:Noun+A3pl+P3sg` + `servis:Noun+A3sg+P3sg+Acc`), duration numeral `"Bir haftadır"` (`[bir:Num,Card]`), compound vs accusative (`s0004`: `"hükümet krizini"` $\to$ `+P3sg+Acc` vs `"temas grubu"` $\to$ `+P3sg`), and direct lexicalized roots (`anlatabilmek`, `sevgiliye`, `benzetmek`).
-   - Raising `gemini-3.8-flash` from `LOW` (`0` thought tokens) to `MEDIUM` (`738.3` thought tokens/sentence) increased its agreement with `gemini-4-argon` `MEDIUM` from `95.08%` (`58/61`) to **`96.72%` (`59/61`)**, resolving both `s0005 #10 "karşı"` (`[karşı:Noun]` in `"karşı karşıya"`) and `s0010 #0 "Ne"` (`[ne:Pron,Ques]` in `"Ne de olsa"`).
-2. **Thinking Token Behavior on `gemini-3.8-flash` vs `gemini-4-argon`**:
-   - At `thinkingLevel: "LOW"`, **both** `gemini-3.8-flash` and `gemini-4-argon` emit **`0` thinking tokens** (`~41–51` JSON output tokens/sentence).
-   - At `thinkingLevel: "MEDIUM"`, `gemini-3.8-flash` uses **`~738` thinking tokens/sentence** (`789.6` total output tokens/sentence), whereas `gemini-4-argon` resolves `LOW` and `MEDIUM` with **`0` thinking tokens** (`41.1` output tokens/sentence) and only emits thinking tokens at `HIGH` (`~554` thought tokens/sentence on `NATURAL`, `~1,430` on `CHALLENGE`).
+   - Raising `gemini-3.8-flash` from `LOW` (`0` thought tokens) to `MEDIUM` (`738.3` thought tokens/sentence) increased its agreement with `gemini-2.5-flash` `MEDIUM` from `95.08%` (`58/61`) to **`96.72%` (`59/61`)**, resolving both `s0005 #10 "karşı"` (`[karşı:Noun]` in `"karşı karşıya"`) and `s0010 #0 "Ne"` (`[ne:Pron,Ques]` in `"Ne de olsa"`).
+2. **Thinking Token Behavior on `gemini-3.8-flash` vs `gemini-2.5-flash`**:
+   - At `thinkingLevel: "LOW"`, **both** `gemini-3.8-flash` and `gemini-2.5-flash` emit **`0` thinking tokens** (`~41–51` JSON output tokens/sentence).
+   - At `thinkingLevel: "MEDIUM"`, `gemini-3.8-flash` uses **`~738` thinking tokens/sentence** (`789.6` total output tokens/sentence), whereas `gemini-2.5-flash` resolves `LOW` and `MEDIUM` with **`0` thinking tokens** (`41.1` output tokens/sentence) and only emits thinking tokens at `HIGH` (`~554` thought tokens/sentence on `NATURAL`, `~1,430` on `CHALLENGE`).
 
 ---
 
 ## 4. Prompt Caching Analysis & Theoretical Cost Table
 
-### 4.1 Prompt Caching Mechanics on `gemini-3.8-flash` and `gemini-4-argon`
+### 4.1 Prompt Caching Mechanics on `gemini-3.8-flash` and `gemini-2.5-flash`
 1. **Explicit Context Caching (`createCachedContent`)**:
    - `models/gemini-3.8-flash` supports `['generateContent', 'countTokens', 'createCachedContent', 'batchGenerateContent']`.
-   - `models/gemini-4-argon` supports `['generateContent', 'countTokens', 'batchGenerateContent']` (no `createCachedContent`).
+   - `models/gemini-2.5-flash` supports `['generateContent', 'countTokens', 'batchGenerateContent']` (no `createCachedContent`).
 2. **Implicit Prompt Caching (`cachedContentTokenCount`)**:
-   - Automatically active on both models whenever a request's shared prefix exceeds `2,048` tokens (`argon_medium` automatically reported `cachedContentTokenCount: 531` on the `GSLA-v2.3` run!).
+   - Automatically active on both models whenever a request's shared prefix exceeds `2,048` tokens (`teacher_medium` automatically reported `cachedContentTokenCount: 531` on the `GSLA-v2.3` run!).
 
 ### 4.2 Theoretical Cost Table Across Options (`GSLA-v2.3`, Calibrated from Empirical `usageMetadata`)
 
@@ -187,7 +187,7 @@ Empirical token profile per `1,000`-sentence slice with `GSLA-v2.3` (`~2.62M–2
 
 | Option / Model & Thinking Config | Thought Tokens / Sent | Total Billed Output / 1K Slice | **Batch API (50% Off): 1 Slice (`1K` sents)** | **Batch API: 5 Slices (`5K` sents)** | **Batch API: 10 Slices (`10K` sents)** | **Batch API: 25 Slices (`25K` sents)** | **Batch API: 100 Slices (`100K` sents)** | *Standard Sync API (No Batch 50% Off): 1K Slice* |
 | :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| **Option 1: `gemini-3.8-flash` `LOW`** (`95.1%` Argon agreement) | **`0`** | `0.051M` (`~51`/sent) | **\$0.22 – \$0.76** | **\$1.10 – \$3.80** | **\$2.20 – \$7.60** | **\$5.50 – \$19.00** | **\$22.00 – \$76.00** | *\$0.44 – \$1.52* |
-| **Option 2: `gemini-3.8-flash` `MEDIUM`** (`96.7%` Argon agreement) | **`~738`** | `0.790M` (`~790`/sent) | **\$0.44 – \$1.87** | **\$2.20 – \$9.35** | **\$4.40 – \$18.70** | **\$11.00 – \$46.75** | **\$44.00 – \$187.00** | *\$0.88 – \$3.74* |
-| **Option 3: `gemini-4-argon` `LOW` or `MEDIUM`** *(Best Argon Value)* | **`0`** | **`0.041M` (`~41`/sent)** | **\$1.92 – \$3.00** | **\$9.60 – \$15.00** | **\$19.20 – \$30.00** | **\$48.00 – \$75.00** | **\$192.00 – \$300.00** | *\$3.84 – \$6.00* |
-| **Option 4: `gemini-4-argon` `HIGH`** (`~820` thought/sent) | **`~820`** | `0.861M` (`~861`/sent) | **\$6.02 – \$7.92** | **\$30.10 – \$39.60** | **\$60.20 – \$79.20** | **\$150.50 – \$198.00** | **\$602.00 – \$792.00** | *\$12.04 – \$15.84* |
+| **Option 1: `gemini-3.8-flash` `LOW`** (`95.1%` Teacher agreement) | **`0`** | `0.051M` (`~51`/sent) | **\$0.22 – \$0.76** | **\$1.10 – \$3.80** | **\$2.20 – \$7.60** | **\$5.50 – \$19.00** | **\$22.00 – \$76.00** | *\$0.44 – \$1.52* |
+| **Option 2: `gemini-3.8-flash` `MEDIUM`** (`96.7%` Teacher agreement) | **`~738`** | `0.790M` (`~790`/sent) | **\$0.44 – \$1.87** | **\$2.20 – \$9.35** | **\$4.40 – \$18.70** | **\$11.00 – \$46.75** | **\$44.00 – \$187.00** | *\$0.88 – \$3.74* |
+| **Option 3: `gemini-2.5-flash` `LOW` or `MEDIUM`** *(Best Teacher Value)* | **`0`** | **`0.041M` (`~41`/sent)** | **\$1.92 – \$3.00** | **\$9.60 – \$15.00** | **\$19.20 – \$30.00** | **\$48.00 – \$75.00** | **\$192.00 – \$300.00** | *\$3.84 – \$6.00* |
+| **Option 4: `gemini-2.5-flash` `HIGH`** (`~820` thought/sent) | **`~820`** | `0.861M` (`~861`/sent) | **\$6.02 – \$7.92** | **\$30.10 – \$39.60** | **\$60.20 – \$79.20** | **\$150.50 – \$198.00** | **\$602.00 – \$792.00** | *\$12.04 – \$15.84* |

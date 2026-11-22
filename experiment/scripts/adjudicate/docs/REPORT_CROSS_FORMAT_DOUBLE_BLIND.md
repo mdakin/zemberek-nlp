@@ -75,7 +75,7 @@ Output strictly JSON conforming to the requested schema.
 ### 2.1 The Pipe-Delimiter Derivation Truncation Bug (`yapabilecek`)
 * **Symptom in Prior Reports:** The report claimed that Zemberek missed the potential mood derivation (`-abil-`) in `yapabilecek`.
 * **Root Cause:** In standard CoNLL-U format, column 10 (`MISC`) separates attributes with `|`. Because `SingleAnalysis.formatLong()` separates derivation groups with `|` (`yap:Verb | abil:Able→Verb | ecek:FutPart→Adj`), splitting column 10 with `misc.split('|')` truncated the candidate string after the root `yap:Verb`.
-* **The Fix:** [`prepare_native_comparison_dataset.py`](file:///home/dndara/work/zemberek-nlp/experiment/scripts/adjudicate/prepare_native_comparison_dataset.py#L50-L58) was modified to extract the entire morpheme chain without splitting on `|`.
+* **The Fix:** [`prepare_native_comparison_dataset.py`](experiment/scripts/adjudicate/prepare_native_comparison_dataset.py#L50-L58) was modified to extract the entire morpheme chain without splitting on `|`.
 * **Adjudication Outcome After Fix:** Gemini reversed its verdict from `GOLD_WINS` to **`MODEL_WINS`**:
   > *"Reason: 'yapabilecek' modifies 'yeterlilikte' as a participle/adjective, not a finite verb."*
   > *Zemberek's native engine correctly predicted `VerbForm=Part` with `Mood=Abil`, whereas the gold treebank tagged it as a finite verb.*
@@ -83,7 +83,7 @@ Output strictly JSON conforming to the requested schema.
 ### 2.2 The Denominator Dilution Bug in `evaluate_adjudication.py`
 * **Symptom in Prior Reports:** True adjudicated accuracy was reported as **98.51%** identically across BOUN, IMST, and Combined.
 * **Root Cause:** When `--num-disputed` was specified, `consensus_tokens` on individual sentence records defaulted to `0`. `evaluate_adjudication.py` fell back to reading the summary metadata for the **entire test corpus (2,053 sentences)**, adding 10,200 consensus tokens from ~1,800 un-evaluated sentences into a sample.
-* **The Fix:** Updated [`prepare_native_comparison_dataset.py`](file:///home/dndara/work/zemberek-nlp/experiment/scripts/adjudicate/prepare_native_comparison_dataset.py#L177) and [`prepare_pairwise_dataset.py`](file:///home/dndara/work/zemberek-nlp/experiment/scripts/adjudicate/prepare_pairwise_dataset.py#L167) to record `consensus_tokens: len(agreed_word_tokens)` per sentence, restricting calculations strictly to the evaluated sample.
+* **The Fix:** Updated [`prepare_native_comparison_dataset.py`](experiment/scripts/adjudicate/prepare_native_comparison_dataset.py#L177) and [`prepare_pairwise_dataset.py`](experiment/scripts/adjudicate/prepare_pairwise_dataset.py#L167) to record `consensus_tokens: len(agreed_word_tokens)` per sentence, restricting calculations strictly to the evaluated sample.
 
 ### 2.3 Lemma Canonicalization: `üzer` vs. `üzeri`
 * **Linguistic Reality:** `üzer` is not a freestanding word in modern Turkish. In TDK dictionaries, the headword is strictly **`üzeri`** (or `üst`).
@@ -180,4 +180,4 @@ Zero control tokens were falsely disputed by the adjudicator, verifying that the
 1. **True Accuracy is ~92%:** On natural Turkish text, Zemberek operates at **91.93% token accuracy** and parses **60.4% of full sentences with zero errors**.
 2. **UD Treebanks Contain Substantial Noise (~9.6%):** Nearly 1 in 10 words in standard UD Turkish treebanks contains an annotation error (10.75% in BOUN, 7.99% in IMST). Naive string comparison against raw CoNLL-U penalizes Zemberek unfairly for treebank mistakes.
 3. **Double-Blind Rig Validated:** 100.0% accuracy on control sentences and only 0.2% ties confirm that the adjudication methodology is sound, symmetrical, and objective.
-4. **Upstream Recommendation:** In [`ExportConllu.java`](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/morphology/ambiguity/dataset/ExportConllu.java), derivation delimiters (`|`) in column 10 (`MISC`) should be safely escaped (e.g. `^` or `//`) to ensure compatibility with standard CoNLL-U parsers.
+4. **Upstream Recommendation:** In [`ExportConllu.java`](experiment/src/main/java/zemberek/morphology/ambiguity/dataset/ExportConllu.java), derivation delimiters (`|`) in column 10 (`MISC`) should be safely escaped (e.g. `^` or `//`) to ensure compatibility with standard CoNLL-U parsers.

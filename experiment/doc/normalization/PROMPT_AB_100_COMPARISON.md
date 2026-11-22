@@ -1,6 +1,6 @@
 # 100-Sentence A/B Comparison: Over-Guided Prompt (`v3.1`) vs. Lean Principle Prompt (`v4-lean`)
 
-- **Model & Settings (Identical for Both)**: `gemini-4-hydrogen`, `thinkingLevel = HIGH`, `group_size = 25` (`4` Batch API requests for `100` sentences).
+- **Model & Settings (Identical for Both)**: `gemini-2.5-pro`, `thinkingLevel = HIGH`, `group_size = 25` (`4` Batch API requests for `100` sentences).
 - **System Prompt Length**: `v3.1` = **`6,295` chars** (`43` lines, `85+` word-pair examples) → `v4-lean` = **`2,020` chars** (`18` lines, **`-67.9%` shorter**).
 - **Completeness & Retries (`v4-lean`)**: **`1350/1350` tokens (`100%`)**, `0` fallbacks, `0` retries.
 - **Token Usage (`v4-lean`, `100` sentences)**: Prompt = `16,299` (`163.0`/sent vs. `244.9`/sent in `v3.1`), Output = `11,999`, Thinking = `23,656`, Total = **`51,954`**.

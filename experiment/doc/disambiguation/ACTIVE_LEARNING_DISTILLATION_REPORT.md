@@ -24,7 +24,7 @@ To resolve this at scale, we engineered and executed an end-to-end active learni
 4. **Training `model-distilled-30k.bin`**: Trained a high-capacity `FastPerceptron` model achieving **94.86% development accuracy** with **768,691 active features**.
 5. **Rigorous Golden 1K Evaluation**: Evaluated across a held-out, 1,000-sentence Golden Test set (11,325 ambiguous tokens). The new 30K model achieved **89.77% ambiguity accuracy** (+19.94% over the legacy baseline) and increased the sentence exact match rate from **4.8% to 35.9%** (a 7.5x improvement).
 6. **Zero-Allocation Speedup**: On Temurin OpenJDK 25 LTS, the new model processes **34,482 words/second**—a **2.8x speedup (+175.5%)** over the legacy resolver with **sub-millisecond latency** (0.41 ms/sent).
-7. **Production Deployment**: Upgraded Zemberek's default model in [`TurkishMorphology.java`](file:///home/dndara/work/zemberek-nlp/morphology/src/main/java/zemberek/morphology/TurkishMorphology.java) and submitted [PR #302](https://github.com/ahmetaa/zemberek-nlp/pull/302).
+7. **Production Deployment**: Upgraded Zemberek's default model in [`TurkishMorphology.java`](morphology/src/main/java/zemberek/morphology/TurkishMorphology.java) and submitted [PR #302](https://github.com/ahmetaa/zemberek-nlp/pull/302).
 
 ---
 
@@ -114,7 +114,7 @@ $$\text{Target} = \max\left(\text{Floor},\; \min\left(\text{Ceiling},\; \text{Ra
 
 ## 3. Targeted Contrastive Minimal Pairs Generation
 
-While natural corpora provide broad linguistic variety, certain fine-grained syntactic distinctions appear infrequently or with heavy distributional skew in raw text. To prevent the model from memorizing spurious unigram priors, we developed a targeted **Contrastive Minimal Pairs Generator** ([`generate_contrastive_pairs.py`](file:///home/dndara/work/zemberek-nlp/experiment/scripts/generate_contrastive_pairs.py)).
+While natural corpora provide broad linguistic variety, certain fine-grained syntactic distinctions appear infrequently or with heavy distributional skew in raw text. To prevent the model from memorizing spurious unigram priors, we developed a targeted **Contrastive Minimal Pairs Generator** ([`generate_contrastive_pairs.py`](experiment/scripts/generate_contrastive_pairs.py)).
 
 ### Methodology & Semantic Gating
 For each ambiguous pattern:
@@ -240,8 +240,8 @@ The 30K distilled model was integrated into the production library and submitted
 - **Scope**: Clean production commits containing only library assets:
   1. `morphology/src/main/resources/tr/ambiguity/model-distilled-30k.bin` (new 6.2 MB model binary)
   2. `morphology/src/main/resources/tr/ambiguity/model-distilled-20k.bin` (removed to conserve jar size)
-  3. [`TurkishMorphology.java`](file:///home/dndara/work/zemberek-nlp/morphology/src/main/java/zemberek/morphology/TurkishMorphology.java) (switched default resource pointer)
-  4. [`DistilledAmbiguityResolverIntegrationTest.java`](file:///home/dndara/work/zemberek-nlp/morphology/src/test/java/zemberek/morphology/ambiguity/DistilledAmbiguityResolverIntegrationTest.java) (added regression test `testNounCompoundHeadDisambiguation`)
+  3. [`TurkishMorphology.java`](morphology/src/main/java/zemberek/morphology/TurkishMorphology.java) (switched default resource pointer)
+  4. [`DistilledAmbiguityResolverIntegrationTest.java`](morphology/src/test/java/zemberek/morphology/ambiguity/DistilledAmbiguityResolverIntegrationTest.java) (added regression test `testNounCompoundHeadDisambiguation`)
 - **Verification**: `mvn test -pl morphology` passed with **252 tests run, 0 failures, 0 errors**.
 
 ---
@@ -274,15 +274,15 @@ Based on empirical findings across the 32.87M lines and 1.56M OOV words:
 
 ## 9. Deliverables & Data Access
 
-All artifacts and datasets are archived in `/home/dndara/data/turkish/distilled/` and `data/ambiguity/`:
+All artifacts and datasets are archived in `~/data/turkish/distilled/` and `data/ambiguity/`:
 
-- **Unified 32K Training Corpus**: [`train_combined_30k.zemberek.txt`](file:///home/dndara/work/zemberek-nlp/data/ambiguity/train_combined_30k.zemberek.txt) (32,214 sentences in native Zemberek training format)
-- **Canonical Training JSONL**: [`train_combined_30k.jsonl`](file:///home/dndara/work/zemberek-nlp/data/ambiguity/train_combined_30k.jsonl) (complete candidate rankings and annotations)
-- **Trained 30K Model Binary**: [`model-distilled-30k.bin`](file:///home/dndara/work/zemberek-nlp/data/ambiguity/model-distilled-30k.bin) (6.2 MB)
-- **Contrastive Minimal Pairs**: [`contrastive_annotated_canonical.jsonl`](file:///home/dndara/work/zemberek-nlp/data/ambiguity/contrastive_annotated_canonical.jsonl) (2,214 sentences)
-- **Golden 1K Test Set**: [`golden_test_1000_canonical.jsonl`](file:///home/dndara/data/turkish/distilled/golden_test_1000_canonical.jsonl) (1,000 held-out evaluation sentences)
-- **Active Learning Candidate Pool**: [`hard_uncertainty_candidates.jsonl`](file:///home/dndara/data/turkish/distilled/hard_uncertainty_candidates.jsonl) (84,971 records)
-- **Unrecognized Words TSV**: [`unrecognized_words.tsv`](file:///home/dndara/data/turkish/distilled/unrecognized_words.tsv) (1,559,886 unique OOV words with frequency counts, domains, and sample contexts)
+- **Unified 32K Training Corpus**: [`train_combined_30k.zemberek.txt`](data/ambiguity/train_combined_30k.zemberek.txt) (32,214 sentences in native Zemberek training format)
+- **Canonical Training JSONL**: [`train_combined_30k.jsonl`](data/ambiguity/train_combined_30k.jsonl) (complete candidate rankings and annotations)
+- **Trained 30K Model Binary**: [`model-distilled-30k.bin`](data/ambiguity/model-distilled-30k.bin) (6.2 MB)
+- **Contrastive Minimal Pairs**: [`contrastive_annotated_canonical.jsonl`](data/ambiguity/contrastive_annotated_canonical.jsonl) (2,214 sentences)
+- **Golden 1K Test Set**: `golden_test_1000_canonical.jsonl` (1,000 held-out evaluation sentences)
+- **Active Learning Candidate Pool**: `hard_uncertainty_candidates.jsonl` (84,971 records)
+- **Unrecognized Words TSV**: `unrecognized_words.tsv` (1,559,886 unique OOV words with frequency counts, domains, and sample contexts)
 
 ---
 
@@ -290,7 +290,7 @@ All artifacts and datasets are archived in `/home/dndara/data/turkish/distilled/
 
 Concurrent with ambiguity filtering, the distillation pipeline instrumented comprehensive **Out-of-Vocabulary (OOV) tracking**, discovering **6,761,477 unrecognized tokens** across **1,559,886 unique surface words** during the scan of 10.36M candidate sentences.
 
-The complete 1.56M-word lexicon is cataloged in [`unrecognized_words.tsv`](file:///home/dndara/data/turkish/distilled/unrecognized_words.tsv). Below are the **Top 35 most frequent unrecognized words**, their frequency, linguistic category, and sample context:
+The complete 1.56M-word lexicon is cataloged in `unrecognized_words.tsv`. Below are the **Top 35 most frequent unrecognized words**, their frequency, linguistic category, and sample context:
 
 | Rank | Word | Occurrences | Category | Linguistic Explanation & Sample Sentence | Recommended Zemberek Enhancement |
 | :---: | :--- | :---: | :---: | :--- | :--- |

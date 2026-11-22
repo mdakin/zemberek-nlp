@@ -5,8 +5,8 @@
 | Metric | Value |
 | :--- | :--- |
 | **Timestamp** | `2026-11-08T01:19:38.438280318Z` |
-| **Source Corpus** | `/home/dndara/data/turkish/refined` (29 domains) |
-| **Output Directory** | `/home/dndara/data/turkish/selected_slices` |
+| **Source Corpus** | `~/data/turkish/refined` (29 domains) |
+| **Output Directory** | `~/data/turkish/selected_slices` |
 | **Candidate Pool Evaluated** | **549,929** clean sentences (30,114 unique `ZAS-v3` signatures) |
 | **Held-Out Test Pool** | **10,000** sentences across **10 slices** (`test_slices/test_slice_001.txt` .. `test_slice_010.txt`) |
 | **Master Training Pool** | **100,000** sentences across **100 slices** (`train_slices/train_slice_001.txt` .. `train_slice_100.txt`) |

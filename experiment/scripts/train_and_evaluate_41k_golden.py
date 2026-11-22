@@ -17,7 +17,7 @@ import subprocess
 import argparse
 from pathlib import Path
 
-REPO_ROOT = "/home/dndara/work/zemberek-nlp"
+REPO_ROOT = "."
 TRAIN_TXT = os.path.join(REPO_ROOT, "data/ambiguity/train_combined_41k.zemberek.txt")
 MODEL_41K_BIN = os.path.join(REPO_ROOT, "data/ambiguity/model-distilled-41k.bin")
 MODEL_41K_TXT = os.path.join(REPO_ROOT, "data/ambiguity/model-distilled-41k.txt")

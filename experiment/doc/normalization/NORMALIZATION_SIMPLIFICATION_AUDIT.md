@@ -23,7 +23,7 @@ Reviewing `master` (`81c41cc4`) after merging `#372`–`#376` surfaced several a
 
 ### A1. Post-Merge Duplications Inside `TurkishSentenceNormalizer` (`1,413` LOC) & `InformalContractionExpander` (`254` LOC)
 
-After merging `#372`–`#376`, inspecting [TurkishSentenceNormalizer.java](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/TurkishSentenceNormalizer.java) and [InformalContractionExpander.java](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/InformalContractionExpander.java) revealed immediate intra-module duplications:
+After merging `#372`–`#376`, inspecting [TurkishSentenceNormalizer.java](normalization/src/main/java/zemberek/normalization/TurkishSentenceNormalizer.java) and [InformalContractionExpander.java](normalization/src/main/java/zemberek/normalization/InformalContractionExpander.java) revealed immediate intra-module duplications:
 
 1. **Two identical static methods in the same file**:
    - `isRegularAnalysis(SingleAnalysis)` (`#L909-L914`) and `isRegularNonProperAnalysis(SingleAnalysis)` (`#L1031-L1036`) have **100% identical bodies**.
@@ -62,12 +62,12 @@ flowchart LR
 
 ### A3. Deduplicate `SingleWordSpellChecker` (`535` LOC) vs `CharacterGraphDecoder` (`599` LOC)
 
-- [SingleWordSpellChecker.java](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/SingleWordSpellChecker.java) duplicates 68 lines of Turkish F/Q keyboard adjacency tables and ~380 lines of trie/Damerau-Levenshtein beam decoding already implemented in [CharacterGraphDecoder.java](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/CharacterGraphDecoder.java).
+- [SingleWordSpellChecker.java](normalization/src/main/java/zemberek/normalization/SingleWordSpellChecker.java) duplicates 68 lines of Turkish F/Q keyboard adjacency tables and ~380 lines of trie/Damerau-Levenshtein beam decoding already implemented in [CharacterGraphDecoder.java](normalization/src/main/java/zemberek/normalization/CharacterGraphDecoder.java).
 - Delegating `SingleWordSpellChecker` internally to `CharacterGraphDecoder` (preserving original surface forms for words with apostrophes/capitals via a lightweight map) cuts `SingleWordSpellChecker` from **`535` LOC → `~95` LOC** while keeping 100% API & test compatibility.
 
 ### A4. Flatten `CharacterGraphDecoder.Decoder.expand()` (`160` LOC, 5-Level Nesting)
 
-- Adding `Node.forEachMatchingChild(char c, CharMatcher matcher, Consumer<Node> consumer)` eliminates the 4-way `hasEpsilonConnection × (cc == null)` branching in [CharacterGraphDecoder.java](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/CharacterGraphDecoder.java#L444-L487), and extracting `expandExactMatches`, `expandSubstitutions`, `expandTranspositions`, and `recordOrQueue` cuts `expand()` in half with max nesting depth `2`.
+- Adding `Node.forEachMatchingChild(char c, CharMatcher matcher, Consumer<Node> consumer)` eliminates the 4-way `hasEpsilonConnection × (cc == null)` branching in [CharacterGraphDecoder.java](normalization/src/main/java/zemberek/normalization/CharacterGraphDecoder.java#L444-L487), and extracting `expandExactMatches`, `expandSubstitutions`, `expandTranspositions`, and `recordOrQueue` cuts `expand()` in half with max nesting depth `2`.
 
 ---
 
@@ -75,12 +75,12 @@ flowchart LR
 
 | Hand-Rolled Code in `normalization` (`81c41cc4`) | Existing `zemberek-core` API | File & Line |
 | :--- | :--- | :--- |
-| `endsWithVoicelessConsonant(String)` (`f,s,t,k,ç,ş,h,p` char chain) | `TurkishAlphabet.INSTANCE.isVoicelessConsonant(char)` + `lastChar(s)` | [TurkishAlphabet.java](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/turkish/TurkishAlphabet.java#L408-L410) |
-| `lastTurkishVowel(String)` (manual reverse loop) | `TurkishAlphabet.INSTANCE.getLastVowel(CharSequence)` | [TurkishAlphabet.java](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/turkish/TurkishAlphabet.java#L416-L427) |
-| `containsDigit(String)` (`TurkishSentenceNormalizer#L456`) | `TurkishAlphabet.INSTANCE.containsDigit(String)` | [TurkishAlphabet.java](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/turkish/TurkishAlphabet.java#L548-L559) |
-| Manual `line.split("=")` loops (`split` & `multi-word-replacements`) | `new KeyValueReader("=").loadFromFile(...)` / `loadFromStream(...)` | [KeyValueReader.java](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/io/KeyValueReader.java#L32-L68) |
-| `private static final Locale tr = new Locale("tr")` | `Turkish.LOCALE` | [Turkish.java](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/turkish/Turkish.java#L10) |
-| Guava `Charsets.UTF_8` | `TextIO.loadLines(Path)` / JDK UTF-8 `Files.readAllLines(Path)` | [TextIO.java](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/text/TextIO.java#L28-L33) |
+| `endsWithVoicelessConsonant(String)` (`f,s,t,k,ç,ş,h,p` char chain) | `TurkishAlphabet.INSTANCE.isVoicelessConsonant(char)` + `lastChar(s)` | [TurkishAlphabet.java](core/src/main/java/zemberek/core/turkish/TurkishAlphabet.java#L408-L410) |
+| `lastTurkishVowel(String)` (manual reverse loop) | `TurkishAlphabet.INSTANCE.getLastVowel(CharSequence)` | [TurkishAlphabet.java](core/src/main/java/zemberek/core/turkish/TurkishAlphabet.java#L416-L427) |
+| `containsDigit(String)` (`TurkishSentenceNormalizer#L456`) | `TurkishAlphabet.INSTANCE.containsDigit(String)` | [TurkishAlphabet.java](core/src/main/java/zemberek/core/turkish/TurkishAlphabet.java#L548-L559) |
+| Manual `line.split("=")` loops (`split` & `multi-word-replacements`) | `new KeyValueReader("=").loadFromFile(...)` / `loadFromStream(...)` | [KeyValueReader.java](core/src/main/java/zemberek/core/io/KeyValueReader.java#L32-L68) |
+| `private static final Locale tr = new Locale("tr")` | `Turkish.LOCALE` | [Turkish.java](core/src/main/java/zemberek/core/turkish/Turkish.java#L10) |
+| Guava `Charsets.UTF_8` | `TextIO.loadLines(Path)` / JDK UTF-8 `Files.readAllLines(Path)` | [TextIO.java](core/src/main/java/zemberek/core/text/TextIO.java#L28-L33) |
 
 ---
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-cd /home/dndara/work/zemberek-nlp
+cd .
 
 mvn test-compile -pl experiment -q
 

@@ -15,8 +15,8 @@ import json
 import time
 import subprocess
 
-DISTILLED_DIR = "/home/dndara/data/turkish/distilled"
-REPO_DATA_DIR = "/home/dndara/work/zemberek-nlp/data/ambiguity"
+DISTILLED_DIR = os.path.expanduser("~/data/turkish/distilled")
+REPO_DATA_DIR = "data/ambiguity"
 
 BATCH3_CANDIDATES = os.path.join(DISTILLED_DIR, "distilled_batch3_10k_candidates.jsonl")
 BATCH3_ANNOTATED = os.path.join(DISTILLED_DIR, "distilled_batch3_10k_annotated.jsonl")

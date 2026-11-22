@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Turkish Lexical Normalization Engine using Google Gemini Batch API (gemini-4-hydrogen).
+Turkish Lexical Normalization Engine using Google Gemini Batch API (gemini-2.5-pro).
 
 Workflow:
   1. Pre-tokenizes noisy sentences with Zemberek's TurkishTokenizer.DEFAULT via
@@ -1388,11 +1388,11 @@ def main() -> None:
     load_env(str(Path.home() / ".env"))
 
     repo_root = Path(__file__).resolve().parent.parent.parent.parent
-    default_input = Path("/home/dndara/data/turkish/normalization/noisy_tr_v2/full_110k/general/slices/train_slice_01.jsonl")
-    default_output = Path("/home/dndara/data/turkish/normalization/noisy_tr_v2/full_110k/general/llm_gold")
+    default_input = Path(os.path.expanduser("~/data/turkish/normalization/noisy_tr_v2/full_110k/general/slices/train_slice_01.jsonl"))
+    default_output = Path(os.path.expanduser("~/data/turkish/normalization/noisy_tr_v2/full_110k/general/llm_gold"))
 
     parser = argparse.ArgumentParser(
-        description="Turkish Lexical Normalization Engine via Gemini Batch API (gemini-4-hydrogen / gemini-4-carbon)"
+        description="Turkish Lexical Normalization Engine via Gemini Batch API (gemini-2.5-pro / gemini-2.5-flash)"
     )
     parser.add_argument(
         "--input-file", default=str(default_input),
@@ -1407,8 +1407,8 @@ def main() -> None:
         help="Run identifier prefix for outputs/registry (default: derived from input slice stem)"
     )
     parser.add_argument(
-        "--model", default="gemini-4-hydrogen",
-        help="Gemini model identifier for Batch API (default: gemini-4-hydrogen)"
+        "--model", default="gemini-2.5-pro",
+        help="Gemini model identifier for Batch API (default: gemini-2.5-pro)"
     )
     parser.add_argument(
         "--reasoning", choices=["low", "medium", "high"], default="medium",

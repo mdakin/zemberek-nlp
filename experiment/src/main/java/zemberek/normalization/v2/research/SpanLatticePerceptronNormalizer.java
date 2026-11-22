@@ -1,4 +1,4 @@
-package zemberek.normalization.v2;
+package zemberek.normalization.v2.research;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -6,13 +6,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import zemberek.normalization.deasciifier.latticedeasciifier.QuantizedWeightTable;
-import zemberek.normalization.v2.NormV2Types.AlignedSentence;
-import zemberek.normalization.v2.NormV2Types.AlignedToken;
-import zemberek.normalization.v2.NormV2Types.PreparedLattice;
-import zemberek.normalization.v2.NormV2Types.SentenceLattice;
-import zemberek.normalization.v2.NormV2Types.SpanArc;
-import zemberek.normalization.v2.NormV2Types.SpanToken;
-import zemberek.normalization.v2.NormV2Types.TextNormalizer;
+import zemberek.normalization.v2.research.NormV2Types.AlignedSentence;
+import zemberek.normalization.v2.research.NormV2Types.AlignedToken;
+import zemberek.normalization.v2.research.NormV2Types.PreparedLattice;
+import zemberek.normalization.v2.research.NormV2Types.SentenceLattice;
+import zemberek.normalization.v2.research.NormV2Types.SpanArc;
+import zemberek.normalization.v2.research.NormV2Types.SpanToken;
+import zemberek.normalization.v2.research.NormV2Types.TextNormalizer;
 
 /**
  * Normalizer 1 ({@code v2.3}): Joint Semi-Markov Cost-Augmented Margin Averaged Perceptron over

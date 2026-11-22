@@ -20,14 +20,14 @@ SYSTEM_INSTRUCTION = (
 )
 
 PROTECTED_FILES = [
-    os.path.realpath("/home/dndara/data/turkish/distilled/distilled_10k_annotated.jsonl"),
-    os.path.realpath("/home/dndara/data/turkish/distilled/distilled_20k_annotated.jsonl"),
-    os.path.realpath("/home/dndara/data/turkish/distilled/distilled_batch2_10k_annotated.jsonl"),
-    os.path.realpath("/home/dndara/data/turkish/distilled/distilled_batch3_10k_annotated.jsonl"),
-    os.path.realpath("/home/dndara/data/turkish/distilled/golden_test_1000_annotated.jsonl"),
-    os.path.realpath("/home/dndara/data/turkish/distilled/golden_test_1000_canonical.jsonl"),
-    os.path.realpath("/home/dndara/data/turkish/distilled/golden_test_2500_annotated.jsonl"),
-    os.path.realpath("/home/dndara/data/turkish/distilled/golden_test_2500_canonical.jsonl"),
+    os.path.realpath(os.path.expanduser("~/data/turkish/distilled/distilled_10k_annotated.jsonl")),
+    os.path.realpath(os.path.expanduser("~/data/turkish/distilled/distilled_20k_annotated.jsonl")),
+    os.path.realpath(os.path.expanduser("~/data/turkish/distilled/distilled_batch2_10k_annotated.jsonl")),
+    os.path.realpath(os.path.expanduser("~/data/turkish/distilled/distilled_batch3_10k_annotated.jsonl")),
+    os.path.realpath(os.path.expanduser("~/data/turkish/distilled/golden_test_1000_annotated.jsonl")),
+    os.path.realpath(os.path.expanduser("~/data/turkish/distilled/golden_test_1000_canonical.jsonl")),
+    os.path.realpath(os.path.expanduser("~/data/turkish/distilled/golden_test_2500_annotated.jsonl")),
+    os.path.realpath(os.path.expanduser("~/data/turkish/distilled/golden_test_2500_canonical.jsonl")),
     os.path.realpath("data/ambiguity/train_combined_30k.jsonl"),
     os.path.realpath("data/ambiguity/train_combined_33k.jsonl"),
     os.path.realpath("data/ambiguity/train_combined_33k_th20k.jsonl"),

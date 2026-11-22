@@ -11,7 +11,7 @@ import time
 import subprocess
 from pathlib import Path
 
-REPO_ROOT = "/home/dndara/work/zemberek-nlp"
+REPO_ROOT = "."
 DATA_DIR = os.path.join(REPO_ROOT, "data/ambiguity")
 
 # Training texts (already generated)

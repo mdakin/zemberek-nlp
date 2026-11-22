@@ -16,8 +16,8 @@ import time
 import subprocess
 from pathlib import Path
 
-JAVA21 = "/home/dndara/sdk/temurin-21/bin/java"
-JAVA25 = "/home/dndara/sdk/temurin-25/bin/java"
+JAVA21 = "~/sdk/temurin-21/bin/java"
+JAVA25 = "~/sdk/temurin-25/bin/java"
 CP = "experiment/target/classes:morphology/target/classes:core/target/classes:dependencies/*"
 CORPUS = "data/ambiguity/sources/UD_Turkish-BOUN/boun_test_canonical.jsonl"
 MODEL = "data/ambiguity/model-distilled-v3.bin"

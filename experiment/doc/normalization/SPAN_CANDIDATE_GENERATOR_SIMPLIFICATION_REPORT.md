@@ -1,7 +1,7 @@
 # Investigation Report: Simplifying `SpanCandidateGenerator` Special Cases with Scaled Clean & `v4.0` Parallel Data
 
 **Date:** `2026-11-22`  
-**Audited Target:** [experiment/.../SpanCandidateGenerator.java](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/normalization/v2/SpanCandidateGenerator.java) (`5,831` LOC) & modularized [normalization/.../v2/](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/v2/)  
+**Audited Target:** [experiment/.../SpanCandidateGenerator.java](experiment/src/main/java/zemberek/normalization/v2/SpanCandidateGenerator.java) (`5,831` LOC) & modularized [normalization/.../v2/](normalization/src/main/java/zemberek/normalization/v2/)  
 **Evaluation Baseline:** `85K (+10K v4)` Parallel Pool + `8.0M Curated (75/25) v5(6/9/18) NO SmoothLm` (`~5.65 MiB`)
 
 ---
@@ -106,17 +106,17 @@ Look at row `C3` on `GECTurk-Clitic`: when social-media `parallel1ToN` is turned
 
 ## 5. Executed Simplification & Post-Verification Results
 
-All Tier 1 + Tier 2 simplifications were executed across both packages (`experiment/src/main/java/zemberek/normalization/v2/` and modular `normalization/src/main/java/zemberek/normalization/v2/`), with SMS shorthands externalized to [`shorthands.tsv`](file:///home/dndara/work/zemberek-nlp/normalization/src/main/resources/normalization/v2/shorthands.tsv) (`153` entries) and `ParallelCorpusMiner.induceSuffixPairs` generalized (`cut ∈ {lcp, lcp-1, lcp-2}`, `sup >= 4`, `prec >= 0.16`, specificity-weighted ranking):
+All Tier 1 + Tier 2 simplifications were executed across both packages (`experiment/src/main/java/zemberek/normalization/v2/` and modular `normalization/src/main/java/zemberek/normalization/v2/`), with SMS shorthands externalized to [`shorthands.tsv`](normalization/src/main/resources/normalization/v2/shorthands.tsv) (`153` entries) and `ParallelCorpusMiner.induceSuffixPairs` generalized (`cut ∈ {lcp, lcp-1, lcp-2}`, `sup >= 4`, `prec >= 0.16`, specificity-weighted ranking):
 
 ### 5.1 Exact Line-of-Code Reduction
 
 | File / Module | Before (LOC) | After (LOC) | Removed |
 | :--- | :---: | :---: | :---: |
-| [SpanCandidateGenerator.java](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/normalization/v2/SpanCandidateGenerator.java) *(monolithic `experiment`)* | `5,831` | **`4,459`** | **`-1,372` (`-23.5%`)** |
-| [ShorthandExpander.java](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/v2/ShorthandExpander.java) *(modular `normalization`)* | `598` | **`129`** | **`-469` (`-78.4%`)** |
-| [SingleTokenRewriteGenerator.java](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/v2/SingleTokenRewriteGenerator.java) *(modular `normalization`)* | `938` | **`704`** | **`-234` (`-24.9%`)** |
-| [SplitMergeSpanGenerator.java](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/v2/SplitMergeSpanGenerator.java) *(modular `normalization`)* | `1,310` | **`1,101`** | **`-209` (`-16.0%`)** |
-| [SpanCandidateGenerator.java](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/v2/SpanCandidateGenerator.java) *(modular `normalization`)* | `1,723` | **`1,591`** | **`-132` (`-7.7%`)** |
+| [SpanCandidateGenerator.java](experiment/src/main/java/zemberek/normalization/v2/SpanCandidateGenerator.java) *(monolithic `experiment`)* | `5,831` | **`4,459`** | **`-1,372` (`-23.5%`)** |
+| [ShorthandExpander.java](normalization/src/main/java/zemberek/normalization/v2/ShorthandExpander.java) *(modular `normalization`)* | `598` | **`129`** | **`-469` (`-78.4%`)** |
+| [SingleTokenRewriteGenerator.java](normalization/src/main/java/zemberek/normalization/v2/SingleTokenRewriteGenerator.java) *(modular `normalization`)* | `938` | **`704`** | **`-234` (`-24.9%`)** |
+| [SplitMergeSpanGenerator.java](normalization/src/main/java/zemberek/normalization/v2/SplitMergeSpanGenerator.java) *(modular `normalization`)* | `1,310` | **`1,101`** | **`-209` (`-16.0%`)** |
+| [SpanCandidateGenerator.java](normalization/src/main/java/zemberek/normalization/v2/SpanCandidateGenerator.java) *(modular `normalization`)* | `1,723` | **`1,591`** | **`-132` (`-7.7%`)** |
 | **Modular Generator Suite Total (`normalization/.../v2/`)** | **`4,569`** | **`3,525`** | **`-1,044` (`-22.9%`)** |
 
 ### 5.2 Data-Mined Suffix Induction Verification (`1,333` High-Precision Rules)

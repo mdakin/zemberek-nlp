@@ -66,7 +66,7 @@ public final class NormalizationBenchmarkSuite {
         args.length > 0
             ? Paths.get(args[0])
             : Paths.get(
-                "/home/dndara/.gemini/antigravity/brain/e13f6e6b-cb12-4920-b467-a54e05357b91/scratch/norm-data");
+                "scratch/norm-data");
 
     System.out.println("==========================================================================");
     System.out.println("  ZEMBEREK NORMALIZATION: EMPIRICAL BENCHMARK & ABLATION SUITE");
@@ -479,12 +479,12 @@ public final class NormalizationBenchmarkSuite {
     List<String> noisyCorpus =
         loadRealSentences(
             List.of(
-                Paths.get("/home/dndara/data/turkish/noisy/kadinlar-klubu.txt"),
-                Paths.get("/home/dndara/data/turkish/noisy/www.kizlarsoruyor.com.txt")),
+                Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/noisy/kadinlar-klubu.txt"),
+                Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/noisy/www.kizlarsoruyor.com.txt")),
             2000);
     List<String> cleanCorpus =
         loadRealSentences(
-            List.of(Paths.get("/home/dndara/data/turkish/clean/ntv-750k-sentences.txt")),
+            List.of(Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/clean/ntv-750k-sentences.txt")),
             2000);
 
     int noisyWords = countTokens(noisyCorpus);
@@ -922,7 +922,7 @@ public final class NormalizationBenchmarkSuite {
 
   private static List<String> loadNoisyOovStream(TurkishMorphology morphology, int maxTokens)
       throws IOException {
-    Path p = Paths.get("/home/dndara/data/turkish/noisy/kadinlar-klubu.txt");
+    Path p = Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/noisy/kadinlar-klubu.txt");
     if (!Files.exists(p)) {
       return Collections.emptyList();
     }

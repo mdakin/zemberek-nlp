@@ -2,7 +2,7 @@
 **Date**: September 25, 2026  
 **Adjudicator**: Gemini 3.8 Flash (`thinkingBudget: 1024`, `temperature: 0.0`)  
 **Execution Mode**: Gemini Batch API (`batchGenerateContent`)  
-**Evaluation Target**: Distilled Ambiguity Model (`/home/dndara/work/zemberek-nlp/data/ambiguity/model-distilled-33k-th20k.bin`)  
+**Evaluation Target**: Distilled Ambiguity Model (`data/ambiguity/model-distilled-33k-th20k.bin`)  
 **Gold Standards**: Pristine CoNLL-U trees (`tr_boun-ud-test.conllu` & `tr_imst-ud-test.conllu`)  
 **Dataset Composition**: 200 disputed sentences (100 BOUN + 100 IMST) + 40 agreed control sentences (20 BOUN + 20 IMST) = **240 sentences total**
 
@@ -97,6 +97,6 @@ Actionable model errors account for **20.45% of word tokens**. The adjudications
 - **Batch Processing**: All 240 items submitted in a single batch request (`batches/nsptav3fq9uisz9addirxzin3cqfeerac1hp`), completing in ~3 minutes.
 - **Cost**: ~$0.01 total in Gemini Batch API mode (50% discount).
 - **Output Artifacts**:
-  - Parsed logs: [`experiment/scripts/adjudicate/logs/adjudications_parsed.jsonl`](file:///home/dndara/work/zemberek-nlp/experiment/scripts/adjudicate/logs/adjudications_parsed.jsonl)
-  - Raw JSON: [`experiment/scripts/adjudicate/logs/raw_requests_responses.jsonl`](file:///home/dndara/work/zemberek-nlp/experiment/scripts/adjudicate/logs/raw_requests_responses.jsonl)
-  - Summary JSON: [`experiment/scripts/adjudicate/logs/adjudication_evaluation_report.json`](file:///home/dndara/work/zemberek-nlp/experiment/scripts/adjudicate/logs/adjudication_evaluation_report.json)
+  - Parsed logs: [`experiment/scripts/adjudicate/logs/adjudications_parsed.jsonl`](experiment/scripts/adjudicate/logs/adjudications_parsed.jsonl)
+  - Raw JSON: [`experiment/scripts/adjudicate/logs/raw_requests_responses.jsonl`](experiment/scripts/adjudicate/logs/raw_requests_responses.jsonl)
+  - Summary JSON: [`experiment/scripts/adjudicate/logs/adjudication_evaluation_report.json`](experiment/scripts/adjudicate/logs/adjudication_evaluation_report.json)

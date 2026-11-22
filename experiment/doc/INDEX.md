@@ -26,6 +26,7 @@ Central index of recent technical reports, architectural audits, error catalogs,
 | **Open Zemberek GitHub issues triage (already-fixed, valid bugs, feature requests)** | [morphology/GITHUB_ISSUES_REPORT.md](morphology/GITHUB_ISSUES_REPORT.md) |
 | **Disambiguator heap/speed profiling (`FastPerceptronAmbiguityResolver`, PR `#359`)** | [disambiguation/DISAMBIGUATOR_MEMORY_AND_PERFORMANCE_FINDINGS.md](disambiguation/DISAMBIGUATOR_MEMORY_AND_PERFORMANCE_FINDINGS.md) |
 | **Data-centric morphological disambiguation pipeline (corpus refinement, `ZAS-v3` taxonomy, `SCSS-v1` selection, `GSLA-v2.1` LLM labeling)** | [disambiguation/TURKISH_DISAMBIGUATION_WHITEPAPER.md](disambiguation/TURKISH_DISAMBIGUATION_WHITEPAPER.md) |
+| **Zemberek lexicon audit, PR `#386` review, 20-file resource map, and corpus-driven modernization roadmap** | [lexicon/ZEMBEREK_LEXICON_MODERNIZATION_REPORT.md](lexicon/ZEMBEREK_LEXICON_MODERNIZATION_REPORT.md) & [lexicon/PR386_DICTIONARY_AUDIT_REVIEW.md](lexicon/PR386_DICTIONARY_AUDIT_REVIEW.md) |
 
 ---
 
@@ -34,12 +35,24 @@ Central index of recent technical reports, architectural audits, error catalogs,
 ```text
 experiment/doc/
 ├── INDEX.md                  # This master index
+├── core/                     # Core collections & memory structure report (1 doc)
+├── lexicon/                  # Dictionary integrity audits, PR #386 review & lexicon modernization roadmap (3 docs)
 ├── tokenization/             # Unicode emoji tokenization, UTF-16 offset invariants & normalizer guards (1 doc)
-├── normalization/            # Data-driven v2 normalizers, profiling, spell-checking, PR audits & error catalogs (15 docs)
+├── normalization/            # Data-driven v2 normalizers, simplification, scaling & error catalogs (19 docs)
 ├── deasciifier/              # LatticeDeasciifier architecture, circumflex handling & legacy audit (3 docs)
 ├── morphology/               # Morphotactics Q&A guide (Q01-Q96) & GitHub issues triage (3 docs)
-└── disambiguation/           # Morphological disambiguation whitepaper, profiling, corpus & selection (9 docs)
+└── disambiguation/           # Morphological disambiguation whitepaper, profiling, UD adjudication & selection (17 docs)
 ```
+
+---
+
+## Lexicon (`lexicon/`)
+
+| Document | Date | Summary |
+| :--- | :---: | :--- |
+| [ZEMBEREK_LEXICON_MODERNIZATION_REPORT.md](lexicon/ZEMBEREK_LEXICON_MODERNIZATION_REPORT.md) | `2026-11-22` | Complete 20-file resource audit of `morphology/src/main/resources/tr/` (runtime vs offline `.dict` vs dead code), self-parse test across `68,035` items, OOV & foreign `Pr:` harmony audit over `270K` sentences, `person-names.dict` 2-tier policy, and 4-phase modernization roadmap. |
+| [PR386_DICTIONARY_AUDIT_REVIEW.md](lexicon/PR386_DICTIONARY_AUDIT_REVIEW.md) | `2026-11-22` | Code, serializer/loader, and `test_slice_02_v4` normalization review of `ahmetaa/zemberek-nlp#386`, documenting 5 must-fix bugs (`bol` homograph, `DictionarySerializer` locale asymmetry, `-og` voicing leak, `semptomatik`, and 33 closed open-compounds). |
+| [DICTIONARY_AUDIT_REPORT.md](lexicon/DICTIONARY_AUDIT_REPORT.md) | `2026-11-22` | Initial Track 1 & Track 2 audit plan for `master-dictionary.dict`, `non-tdk.dict`, and `abbreviations.dict`. |
 
 ---
 
@@ -66,8 +79,8 @@ experiment/doc/
 | [RECENT_PRS_AUDIT_345_TO_364.md](normalization/RECENT_PRS_AUDIT_345_TO_364.md) | `2026-11-13` | Forensic code quality and performance audit of PRs `#345`–`#364`: bug fixes in `TurkishSpellChecker` (`#354`), `ElongationNormalizer` Roman-numeral regex & `InformalContractionExpander` prefix guards (`#365`–`#367`), memory savings (`#359`–`#363`), and rationale for closing redundant PRs (`#350`, `#353`, `#357`, `#358`, `#362`, `#364`). |
 | [TURKISH_NORMALIZATION_FROM_SCRATCH_REPORT.md](normalization/TURKISH_NORMALIZATION_FROM_SCRATCH_REPORT.md) | `2026-11-13` | First-principles architectural analysis of why greedy `preProcess()` cascades, lowercase orthographic destruction, closed root lexicons, and 2-gram LMs hit structural ceilings, with a blueprint for next-generation Turkish normalization. |
 | [ZEMBEREK_NORMALIZATION_IMPROVEMENTS_REPORT.md](normalization/ZEMBEREK_NORMALIZATION_IMPROVEMENTS_REPORT.md) | `2026-11-13` | Multi-benchmark comparison (`0.18.0` release vs `upstream/master` vs PR stack `#346`–`#357` and `norm-data-v2`) across `nasty_5k`, `MultiLexNorm TR`, `BOUN Clean`, `GECTurk`, and `Mukayese TRSpell10`, including throughput and heap metrics. |
-| [NASTY_5K_BENCHMARK_README.md](normalization/NASTY_5K_BENCHMARK_README.md) | `2026-11-13` | Dataset documentation for `nasty_5k` (`/home/dndara/data/turkish/normalization/custom_benchmark/nasty_5k`): source distribution, recoverable-noise filtering gates, file formats, and LLM gold annotation protocol. |
-| [TURKISH_NORMALIZATION_DATA_README.md](normalization/TURKISH_NORMALIZATION_DATA_README.md) | `2026-11-15` | Master guide to `/home/dndara/data/turkish/normalization/`: strict anti-leakage policy, public benchmarks (`MultiLexNorm`, `Mukayese TRSpell10`, `GECTurk`), 3 controlled `1K` synthetic benchmarks (`synthetic_1k`), noisy corpora, and external lexicons. |
+| [NASTY_5K_BENCHMARK_README.md](normalization/NASTY_5K_BENCHMARK_README.md) | `2026-11-13` | Dataset documentation for `nasty_5k` (`~/data/turkish/normalization/custom_benchmark/nasty_5k`): source distribution, recoverable-noise filtering gates, file formats, and LLM gold annotation protocol. |
+| [TURKISH_NORMALIZATION_DATA_README.md](normalization/TURKISH_NORMALIZATION_DATA_README.md) | `2026-11-15` | Master guide to `~/data/turkish/normalization/`: strict anti-leakage policy, public benchmarks (`MultiLexNorm`, `Mukayese TRSpell10`, `GECTurk`), 3 controlled `1K` synthetic benchmarks (`synthetic_1k`), noisy corpora, and external lexicons. |
 | [TURKISH_NOISY_TEXT_CORPUS_AND_BENCHMARK_ROADMAP.md](normalization/TURKISH_NOISY_TEXT_CORPUS_AND_BENCHMARK_ROADMAP.md) | `2026-11-12` | Verified inventory of Turkish noisy-text datasets and roadmap separating large unannotated noisy corpora (for mining/LM) from gold-annotated evaluation benchmarks. |
 | [TURKISH_NORMALIZATION_INVESTIGATION_AND_ROADMAP.md](normalization/TURKISH_NORMALIZATION_INVESTIGATION_AND_ROADMAP.md) | `2026-11-12` | Deep dive into `zemberek-normalization` internals, academic literature review, confirmed baseline bugs (`B1`–`B4`), and phased engineering roadmap (`A1`–`A6`, `S1`–`S2`). |
 
@@ -95,8 +108,6 @@ experiment/doc/
 
 ## 4. Morphological Disambiguation & Corpus Curation (`disambiguation/`)
 
-*(Note: Copies of the `2026-11-08` reports and their companion `.json` manifests also remain at `experiment/docs/model/` because Java tools in `experiment/src/main/java/zemberek/morphology/ambiguity/model/` write directly to those paths.)*
-
 | Document | Date | Summary |
 | :--- | :---: | :--- |
 | [DISAMBIGUATOR_MEMORY_AND_PERFORMANCE_FINDINGS.md](disambiguation/DISAMBIGUATOR_MEMORY_AND_PERFORMANCE_FINDINGS.md) | `2026-11-10` | Exact heap breakdown (`408 MB` retained -> lazy/bounded fixes in PRs `#359` & `#363`) and CPU hot-path profiling of `FastPerceptronAmbiguityResolver` and `AnalysisCache`. |
@@ -111,8 +122,8 @@ experiment/doc/
 
 ---
 
-## 5. Older Pre-November Reports (`Sept–Oct 2026`, Left in Place)
+## 5. Core & Earlier Disambiguation / Adjudication Reports
 
-Older exploratory documents from September–October 2026 were intentionally left in their original locations rather than mixed into `experiment/doc/`:
-- **Core collections audit** (`2026-09-20`): `core/COLLECTIONS_REPORT.md`
-- **Early disambiguation & UD adjudication drafts** (`2026-09-20` – `2026-10-01`): `data/ambiguity/*.md`, `experiment/scripts/adjudicate/docs/*.md`, and root-level `*_ADJUDICATION*.md` / `FINAL_DISAMBIGUATION_BENCHMARK_REPORT.md` / `MODEL_COMPRESSION_REPORT.md` / `ACTIVE_LEARNING_DISTILLATION_REPORT.md` / `FAST_PERCEPTRON_VITERBI_PROFILING_REPORT.md`.
+Relocated cleanly into `experiment/doc/` during the November 2026 workspace cleanup:
+- **Core collections audit**: [core/COLLECTIONS_REPORT.md](core/COLLECTIONS_REPORT.md)
+- **Disambiguation benchmarks, compression & UD adjudication reports**: `disambiguation/{FINAL_DISAMBIGUATION_BENCHMARK_REPORT,MODEL_COMPRESSION_REPORT,ACTIVE_LEARNING_DISTILLATION_REPORT,FAST_PERCEPTRON_VITERBI_PROFILING_REPORT,UD_BENCHMARK_ADJUDICATION_REPORT,ADJUDICATION_OLD_VS_NEW_REPORT,TEST_PLAN_COMPREHENSIVE_ADJUDICATION,README_REPLICATION_PACKAGE}.md` and `experiment/scripts/adjudicate/docs/*.md`.

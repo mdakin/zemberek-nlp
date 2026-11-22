@@ -61,15 +61,15 @@ Organized publicly available benchmarks, external lexicons, and multi-domain noi
 
 ## Linked Pre-Existing Local Corpora (`corpora_plain/local_existing_links/`)
 
-- `corpora_plain/local_existing_links/kadinlar-klubu.txt` -> `/home/dndara/data/turkish/noisy/kadinlar-klubu.txt` (2033.2 MB)
-- `corpora_plain/local_existing_links/www.kizlarsoruyor.com.txt` -> `/home/dndara/data/turkish/clean/www.kizlarsoruyor.com.txt` (1245.8 MB)
-- `corpora_plain/local_existing_links/www.tvyorumlari.com.txt` -> `/home/dndara/data/turkish/clean/www.tvyorumlari.com.txt` (6.3 MB)
-- `corpora_plain/local_existing_links/www.sikayetim.com.txt` -> `/home/dndara/data/turkish/clean/www.sikayetim.com.txt` (7.3 MB)
-- `corpora_plain/local_existing_links/www.nurturia.com.tr.txt` -> `/home/dndara/data/turkish/clean/www.nurturia.com.tr.txt` (56.6 MB)
-- `corpora_plain/local_existing_links/forum.shiftdelete.net.txt` -> `/home/dndara/data/turkish/clean/forum.shiftdelete.net.txt` (182.1 MB)
-- `corpora_plain/local_existing_links/forum.memurlar.net.txt` -> `/home/dndara/data/turkish/clean/forum.memurlar.net.txt` (204.5 MB)
-- `corpora_plain/local_existing_links/wowturkey.com.txt` -> `/home/dndara/data/turkish/clean/wowturkey.com.txt` (1400.5 MB)
-- `corpora_plain/local_existing_links/unparsed_words.tsv` -> `/home/dndara/data/turkish/unparsed_words.tsv` (154.8 MB)
+- `corpora_plain/local_existing_links/kadinlar-klubu.txt` -> `~/data/turkish/noisy/kadinlar-klubu.txt` (2033.2 MB)
+- `corpora_plain/local_existing_links/www.kizlarsoruyor.com.txt` -> `~/data/turkish/clean/www.kizlarsoruyor.com.txt` (1245.8 MB)
+- `corpora_plain/local_existing_links/www.tvyorumlari.com.txt` -> `~/data/turkish/clean/www.tvyorumlari.com.txt` (6.3 MB)
+- `corpora_plain/local_existing_links/www.sikayetim.com.txt` -> `~/data/turkish/clean/www.sikayetim.com.txt` (7.3 MB)
+- `corpora_plain/local_existing_links/www.nurturia.com.tr.txt` -> `~/data/turkish/clean/www.nurturia.com.tr.txt` (56.6 MB)
+- `corpora_plain/local_existing_links/forum.shiftdelete.net.txt` -> `~/data/turkish/clean/forum.shiftdelete.net.txt` (182.1 MB)
+- `corpora_plain/local_existing_links/forum.memurlar.net.txt` -> `~/data/turkish/clean/forum.memurlar.net.txt` (204.5 MB)
+- `corpora_plain/local_existing_links/wowturkey.com.txt` -> `~/data/turkish/clean/wowturkey.com.txt` (1400.5 MB)
+- `corpora_plain/local_existing_links/unparsed_words.tsv` -> `~/data/turkish/unparsed_words.tsv` (154.8 MB)
 
 ## Search Query Datasets (`queries/`)
 

@@ -1,4 +1,4 @@
-package zemberek.normalization.v2;
+package zemberek.normalization.v2.research;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,18 +28,18 @@ import zemberek.normalization.deasciifier.latticedeasciifier.LatticeDeasciifier;
 import zemberek.normalization.deasciifier.latticedeasciifier.LatticeDeasciifier.CircumflexMode;
 import zemberek.normalization.experiment.CompactStemEndingSpellChecker;
 import zemberek.normalization.experiment.CompactStemEndingSpellChecker.ScoredCandidate;
-import zemberek.normalization.v2.NormV2Types.AlignedSentence;
-import zemberek.normalization.v2.NormV2Types.CasingShape;
-import zemberek.normalization.v2.NormV2Types.PreparedLattice;
-import zemberek.normalization.v2.NormV2Types.SentenceLattice;
-import zemberek.normalization.v2.NormV2Types.SpanArc;
-import zemberek.normalization.v2.NormV2Types.SpanToken;
-import zemberek.normalization.v2.ParallelCorpusMiner.CleanWordLm;
-import zemberek.normalization.v2.ParallelCorpusMiner.MergeEntry;
-import zemberek.normalization.v2.ParallelCorpusMiner.MinedKnowledge;
-import zemberek.normalization.v2.ParallelCorpusMiner.RewriteEntry;
-import zemberek.normalization.v2.ParallelCorpusMiner.SuffixRule;
-import zemberek.normalization.v2.ParallelCorpusMiner.TargetCount;
+import zemberek.normalization.v2.research.NormV2Types.AlignedSentence;
+import zemberek.normalization.v2.research.NormV2Types.CasingShape;
+import zemberek.normalization.v2.research.NormV2Types.PreparedLattice;
+import zemberek.normalization.v2.research.NormV2Types.SentenceLattice;
+import zemberek.normalization.v2.research.NormV2Types.SpanArc;
+import zemberek.normalization.v2.research.NormV2Types.SpanToken;
+import zemberek.normalization.v2.research.ParallelCorpusMiner.CleanWordLm;
+import zemberek.normalization.v2.research.ParallelCorpusMiner.MergeEntry;
+import zemberek.normalization.v2.research.ParallelCorpusMiner.MinedKnowledge;
+import zemberek.normalization.v2.research.ParallelCorpusMiner.RewriteEntry;
+import zemberek.normalization.v2.research.ParallelCorpusMiner.SuffixRule;
+import zemberek.normalization.v2.research.ParallelCorpusMiner.TargetCount;
 import zemberek.tokenization.Token;
 
 /**
@@ -4429,7 +4429,7 @@ public final class SpanCandidateGenerator {
       if (in == null) {
         java.nio.file.Path fallback =
             java.nio.file.Paths.get(
-                "/home/dndara/work/zemberek-nlp/normalization/src/main/resources/normalization/v2/shorthands.tsv");
+                "normalization/src/main/resources/normalization/v2/shorthands.tsv");
         if (java.nio.file.Files.exists(fallback)) {
           in = java.nio.file.Files.newInputStream(fallback);
         }

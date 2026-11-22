@@ -83,25 +83,25 @@ public class SentenceSelector {
   @Parameter(
       names = {"-i", "--inputDir"},
       description = "Directory containing refined corpus files.")
-  public Path inputDir = Paths.get("/home/dndara/data/turkish/refined");
+  public Path inputDir = Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/refined");
 
   @Parameter(
       names = {"-o", "--outputDir"},
       description = "Output directory for selected test slices and training slices.")
-  public Path outputDir = Paths.get("/home/dndara/data/turkish/selected_slices");
+  public Path outputDir = Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/selected_slices");
 
   @Parameter(
       names = {"-r", "--reportOut"},
       description = "Markdown report output file.")
   public Path reportOut =
-      Paths.get("/home/dndara/work/zemberek-nlp/experiment/docs/model/sentence_selection_report.md");
+      Paths.get("experiment/docs/model/sentence_selection_report.md");
 
   @Parameter(
       names = {"-j", "--jsonOut"},
       description = "JSON manifest output file.")
   public Path jsonOut =
       Paths.get(
-          "/home/dndara/work/zemberek-nlp/experiment/docs/model/sentence_selection_manifest.json");
+          "experiment/docs/model/sentence_selection_manifest.json");
 
   @Parameter(
       names = {"-t", "--threads"},

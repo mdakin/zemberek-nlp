@@ -10,7 +10,7 @@
 
 ## Selection & Quality Gates
 
-Generated deterministically (`new Random(42)`) by [`MineNastySentences.java`](file:///home/dndara/data/turkish/normalization/scripts/MineNastySentences.java) using Zemberek `TurkishMorphology` (formal, informal, and diacritic-tolerant informal), `TurkishTokenizer`, `TurkishSentenceExtractor`, and `LanguageIdentifier`:
+Generated deterministically (`new Random(42)`) by `MineNastySentences.java` using Zemberek `TurkishMorphology` (formal, informal, and diacritic-tolerant informal), `TurkishTokenizer`, `TurkishSentenceExtractor`, and `LanguageIdentifier`:
 
 - **Length Window**: `5 <= word_count <= 15` lexical words, `22 <= char_len <= 145`, total tokens `<= 22`.
 - **Anti-Leakage Exclusion**: Zero overlap against `15,972` normalized keys from `MultiLexNorm` (`tur`/`tur_deu` train & test), `GECTurk/BOUN` `-de/-da` splits, and `PERMANENT_HELDOUT_TEST_SET_MANIFEST.json`.
@@ -54,7 +54,7 @@ Generated deterministically (`new Random(42)`) by [`MineNastySentences.java`](fi
 
 ## LLM Gold Normalization (`llm_gold/`)
 
-Generated on `2026-11-13` via [`normalize_nasty_batch.py`](file:///home/dndara/work/zemberek-nlp/experiment/scripts/normalization/normalize_nasty_batch.py) using **Google Gemini Batch API** (`gemini-4-hydrogen`, `thinkingLevel: MEDIUM`, `group_size = 10` sentences/request across `500` requests in `10` batches of `50` requests):
+Generated on `2026-11-13` via [`normalize_nasty_batch.py`](experiment/scripts/normalization/normalize_nasty_batch.py) using **Google Gemini Batch API** (`gemini-2.5-pro`, `thinkingLevel: MEDIUM`, `group_size = 10` sentences/request across `500` requests in `10` batches of `50` requests):
 
 - **Pre-tokenizer**: Stage-1 Zemberek `TurkishTokenizer` (`61,925` total tokens across `5,000` sentences).
 - **Coverage & Reliability**: `61,925 / 61,925` tokens (`100%`) LLM-normalized (`0` identity fallbacks, `0` single-sentence retries), elapsed `295.9s`.

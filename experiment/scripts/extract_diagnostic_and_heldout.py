@@ -17,7 +17,7 @@ import json
 import random
 from collections import defaultdict, Counter
 
-DISTILLED_DIR = "/home/dndara/data/turkish/distilled"
+DISTILLED_DIR = os.path.expanduser("~/data/turkish/distilled")
 SRC_CANDIDATES = os.path.join(DISTILLED_DIR, "hard_uncertainty_candidates.jsonl")
 
 # 1. Collect all forbidden sentence IDs and exact texts from previous batches
@@ -32,8 +32,8 @@ exclude_files = [
     os.path.join(DISTILLED_DIR, "test_heldout_250_candidates.jsonl"),
     os.path.join(DISTILLED_DIR, "test_heldout_100_candidates.jsonl"),
     os.path.join(DISTILLED_DIR, "random_natural_250_candidates.jsonl"),
-    "/home/dndara/work/zemberek-nlp/data/ambiguity/train_combined_30k.jsonl",
-    "/home/dndara/work/zemberek-nlp/data/ambiguity/contrastive_annotated_canonical.jsonl",
+    "data/ambiguity/train_combined_30k.jsonl",
+    "data/ambiguity/contrastive_annotated_canonical.jsonl",
 ]
 
 for fpath in exclude_files:

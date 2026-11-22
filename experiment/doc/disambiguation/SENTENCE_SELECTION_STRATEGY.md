@@ -2,14 +2,14 @@
 
 ## 1. Problem Statement & Design Goals
 
-We have a refined corpus of **100%-parseable Turkish sentences** across 29 domain files in `/home/dndara/data/turkish/refined` and a complete empirical ambiguity taxonomy (`ZAS-v3`, `42,055` canonical Meso-Signatures).
+We have a refined corpus of **100%-parseable Turkish sentences** across 29 domain files in `~/data/turkish/refined` and a complete empirical ambiguity taxonomy (`ZAS-v3`, `42,055` canonical Meso-Signatures).
 
-Our goal is to select two strictly isolated, slice-structured pools of sentences stored in `/home/dndara/data/turkish/selected_slices`:
+Our goal is to select two strictly isolated, slice-structured pools of sentences stored in `~/data/turkish/selected_slices`:
 1. **A 10,000-Sentence Held-Out Test Pool (`10 slices x 1,000 sentences`)**:
-   - Stored in `/home/dndara/data/turkish/selected_slices/test_slices/test_slice_001.txt` .. `test_slice_010.txt` (plus `test_10k_ordered.txt`).
+   - Stored in `~/data/turkish/selected_slices/test_slices/test_slice_001.txt` .. `test_slice_010.txt` (plus `test_10k_ordered.txt`).
    - Every single `1,000`-sentence test slice is a **complete, balanced evaluation benchmark on its own** (combining `700` natural-distribution sentences for real-world accuracy/throughput and `300` diagnostic challenge sentences covering all 9 `ZAS-v3` Macro-Mechanisms and `F15`/`F17`-blind `LEXICAL_ONLY` twins).
 2. **A 100,000-Sentence Master Training Pool (`100 slices x 1,000 sentences`)**:
-   - Stored in `/home/dndara/data/turkish/selected_slices/train_slices/train_slice_001.txt` .. `train_slice_100.txt` (plus `train_100k_ordered.txt`).
+   - Stored in `~/data/turkish/selected_slices/train_slices/train_slice_001.txt` .. `train_slice_100.txt` (plus `train_100k_ordered.txt`).
    - Every single `1,000`-sentence slice **is a balanced, representative training set on its own**, AND any cumulative prefix of $k$ slices ($1\text{K}, 2\text{K}, 5\text{K}, 10\text{K}, \dots, 100\text{K}$) **maximizes new morphological, lexical, and contextual coverage** with minimal redundancy.
 
 ---
@@ -25,11 +25,11 @@ Our goal is to select two strictly isolated, slice-structured pools of sentences
    - **Positional Drift & Long-Distance Genitive Chains**: On sentences with `18–30` words, LLMs exhibit measurable attention dilution ("lost-in-the-middle") when resolving whether an `-I` suffix is `Noun+P3sg` (possessed by a genitive noun 8 words earlier) or `Noun+Acc` (direct object of a verb 6 words later), or when tracking multi-clause participle chains.
    - **Error Contagion in Sequential Perceptron Training**: If an LLM makes even 1 mistake in a 25-word sentence, that corrupted tag becomes the *context history* (`prev` / `prev2`) for the next words during `FastPerceptronAmbiguityResolver` training, polluting the transition weights (`F15`, `F17`, `F19`, `F20`).
 2. **Why `FastPerceptronAmbiguityResolver` Does Not Need Sentences Longer Than `15` Words**:
-   - Inspecting [`FastPerceptronAmbiguityResolver.java`](file:///home/dndara/work/zemberek-nlp/morphology/src/main/java/zemberek/morphology/ambiguity/ceptron/FastPerceptronAmbiguityResolver.java), the feature extractor (`Extractor`) **only ever inspects a 4-token local window**: `[w_{t-2}, w_{t-1}, w_t, w_{t+1}]` (`2` words left, `1` word right).
+   - Inspecting [`FastPerceptronAmbiguityResolver.java`](morphology/src/main/java/zemberek/morphology/ambiguity/ceptron/FastPerceptronAmbiguityResolver.java), the feature extractor (`Extractor`) **only ever inspects a 4-token local window**: `[w_{t-2}, w_{t-1}, w_t, w_{t+1}]` (`2` words left, `1` word right).
    - It has **zero features** that look 5, 10, or 20 words away. Therefore, a 25-word sentence provides **zero architectural advantage** to `FastPerceptronAmbiguityResolver` over a `7–15` word sentence, while costing ~2.2x more LLM tokens and introducing higher label noise!
 3. **Why `7–15` Words Is the Optimal Range**:
    - **Rejects Telegraphic Fragments (`5–6` words)**: 5–6 word sentences in web/subtitle corpora are often elliptical fragments (`"Evet, ben de öyle düşünüyorum."`). Starting at **`7` words** ensures a complete Turkish clause structure (Subject + Modifiers/Objects + Subordinate/Participle + Finite Verb).
-   - **Covers the Natural Core of the Corpus**: In `/home/dndara/data/turkish/refined`, the median sentence length is `8` words and the mean is `10.01` words; **over 58% of the entire refined corpus (~74 million sentences)** falls directly inside `[7, 15]` words.
+   - **Covers the Natural Core of the Corpus**: In `~/data/turkish/refined`, the median sentence length is `8` words and the mean is `10.01` words; **over 58% of the entire refined corpus (~74 million sentences)** falls directly inside `[7, 15]` words.
    - **Three Balanced Sub-Buckets Within `7–15` Words**:
      - **Compact (`7–9` words)**: `35%` (`350` sentences per slice)
      - **Standard (`10–12` words)**: `40%` (`400` sentences per slice)
@@ -69,7 +69,7 @@ Each `test_slice_XXX.txt` (`1,000` sentences) is interleaved so that it contains
 We partition the `100,000` training sentences into **100 slices of 1,000 sentences each** (`train_slice_001.txt` .. `train_slice_100.txt`), plus a single concatenated prefix-optimal file (`train_100k_ordered.txt`).
 
 ### 5.1. Candidate Hygiene, Orthography, Emoji & Parenthesis Rejection Gates
-Before any sentence from `/home/dndara/data/turkish/refined` can enter the candidate pool:
+Before any sentence from `~/data/turkish/refined` can enter the candidate pool:
 1. **Strict `7–15` Word Length Gate**:
    - Only sentences with **`7 <= wordCount <= 15`** (excluding punctuation) are accepted.
 2. **Strict Parenthesis, Bracket & Emoji Rejection Gate**:
@@ -103,10 +103,10 @@ $$\text{Score}(S) = \frac{\sum_{i=1}^{m} \text{Gain}(w_i)}{m^{0.55} \cdot |S|^{0
 
 ## 6. Output Directory Layout
 
-All selected slices are exported to `/home/dndara/data/turkish/selected_slices`:
+All selected slices are exported to `~/data/turkish/selected_slices`:
 
 ```text
-/home/dndara/data/turkish/selected_slices/
+~/data/turkish/selected_slices/
 ├── test_slices/
 │   ├── test_slice_001.txt             # Test Slice 1 (1,000 sents, 7-15w: 700 Natural + 300 Challenge)
 │   ├── test_slice_001.meta.tsv        # Per-sentence metadata (NATURAL/CHALLENGE, mechanism, etc.)

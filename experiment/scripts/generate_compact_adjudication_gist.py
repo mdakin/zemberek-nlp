@@ -16,7 +16,6 @@ from pathlib import Path
 from collections import Counter
 
 
-def format_sentence_block(s, num):
 def format_sentence_block(s, num, dataset_tokens):
     tb = s["treebank"]
     sid = s["sentence_id"]

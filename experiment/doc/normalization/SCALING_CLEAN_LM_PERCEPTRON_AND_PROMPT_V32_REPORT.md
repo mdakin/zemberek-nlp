@@ -1,7 +1,7 @@
 # Scaling `CleanWordLm` (`5M 70/30` & `8M 75/25`), `SmoothLm` Ablation, `+30K` Perceptron Expansion, and Lean LLM Prompt (`v4.0`)
 
 **Date:** `2026-11-19`  
-**Companion Docs:** [MODEL_COMPRESSION_REPORT.md](file:///home/dndara/work/zemberek-nlp/MODEL_COMPRESSION_REPORT.md) *(Part II: `MultiLevelMphf` `v5` `30.71 → 3.99 MiB`)* · [PROMPT_AB_100_COMPARISON.md](file:///home/dndara/.gemini/antigravity/brain/e881e065-186e-4459-9937-8488961d947e/PROMPT_AB_100_COMPARISON.md) *(`100`-sentence `v3.1` vs. `v4.0` Batch A/B)*
+**Companion Docs:** [MODEL_COMPRESSION_REPORT.md](MODEL_COMPRESSION_REPORT.md) *(Part II: `MultiLevelMphf` `v5` `30.71 → 3.99 MiB`)* · [PROMPT_AB_100_COMPARISON.md](PROMPT_AB_100_COMPARISON.md) *(`100`-sentence `v3.1` vs. `v4.0` Batch A/B)*
 
 ---
 
@@ -10,8 +10,8 @@
 | Question | Empirically Verified Answer | Key Numbers |
 | :--- | :---: | :--- |
 | **1. Scale `CleanWordLm` or `SmoothLm`?** | **Scale `CleanWordLm` on curated news + subtitles/Onedio (`5M–8M`, `70/30`–`75/25`) & prune *before* Perceptron training; drop `SmoothLm` in `v2`** | **`5.0M (70/30)`** (`+Smooth`) peaks unpruned (`81.18%` `test_slice_01`, `90.81%` `nasty_5k`, `50.46%` `GECTurk`). For compact production (`v5`), **`8.0M Curated (75/25) v5(6/9/18) NO SmoothLm [Pre-Pruned]` (`5.56 MiB` total vs. `7.33 MiB` shipped)** beats **even unpruned `1.8M + SmoothLm`** on `test_slice_01` (`81.09%` vs. `80.79%`), `nasty_5k` (`90.49%` vs. `90.41%`), `MultiLexNorm` (`67.63%` vs. `67.43%`), `Synth-Asciified` (**`97.45%`**, all-time best), and ties `Synth-Typo` (`82.26%`), while saving `1.77 MiB` `.gz`, `-14 MB` heap, and `+19%` speed. |
-| **2. Add `+20K` Heavy + `5K` Medium + `5K` Light (`75K → 105K`)?** | **Verified Live on First `+10K` Heavy (`75K → 85K`, `v4.0` + `gemini-4-hydrogen` `MEDIUM`)** | Adding just **`+10K` (`+13.3%`) `v4.0` Heavy sentences** grew `LOO`-active rewrites (`edits >= 2`) by **`+15.4%`** (`11,967 → 13,815`) and pushed compact **`85K + 8M Curated v5(6/9/18) NO SmoothLm` (`~5.65 MiB`)** to **all-time records**: `test_slice_01` **`81.33%`** (`69.26 / 61.18%` EM), `nasty_5k` **`90.72%`** (`-192` ed vs. shipped `v5`), `GECTurk-Clitic` **`48.55%`**, and `Synth-Asciified` **`97.52%`** (`87.0%` Ca). Adding `+5K` Medium + `+5K` Light next will also restore the `66.7%` Heavy ratio and trim `CleanFPR`. |
-| **3. Was Prompt `v3.1` over-guiding `gemini-4-hydrogen`?** | **Yes — Replaced `43` Lines (`85+` Examples) with `18`-Line `v4.0` Lean Prompt** | Over-prescriptive rules in `v3.0`/`v3.1` caused our worst annotation quirks (`91.3%` uncapitalized 2nd sentences after `.!?`, `29` `Zeynepciğim` disharmony errors, `"10. da → 10'da"`). On the `100`-sentence Batch A/B test, `v4.0` (`-67%` shorter, `-33.4%` prompt tokens/sent) matched `14/14` clean controls and `14/14` heavy slang sentences while fixing multi-sentence capitalization cleanly. |
+| **2. Add `+20K` Heavy + `5K` Medium + `5K` Light (`75K → 105K`)?** | **Verified Live on First `+10K` Heavy (`75K → 85K`, `v4.0` + `gemini-2.5-pro` `MEDIUM`)** | Adding just **`+10K` (`+13.3%`) `v4.0` Heavy sentences** grew `LOO`-active rewrites (`edits >= 2`) by **`+15.4%`** (`11,967 → 13,815`) and pushed compact **`85K + 8M Curated v5(6/9/18) NO SmoothLm` (`~5.65 MiB`)** to **all-time records**: `test_slice_01` **`81.33%`** (`69.26 / 61.18%` EM), `nasty_5k` **`90.72%`** (`-192` ed vs. shipped `v5`), `GECTurk-Clitic` **`48.55%`**, and `Synth-Asciified` **`97.52%`** (`87.0%` Ca). Adding `+5K` Medium + `+5K` Light next will also restore the `66.7%` Heavy ratio and trim `CleanFPR`. |
+| **3. Was Prompt `v3.1` over-guiding `gemini-2.5-pro`?** | **Yes — Replaced `43` Lines (`85+` Examples) with `18`-Line `v4.0` Lean Prompt** | Over-prescriptive rules in `v3.0`/`v3.1` caused our worst annotation quirks (`91.3%` uncapitalized 2nd sentences after `.!?`, `29` `Zeynepciğim` disharmony errors, `"10. da → 10'da"`). On the `100`-sentence Batch A/B test, `v4.0` (`-67%` shorter, `-33.4%` prompt tokens/sent) matched `14/14` clean controls and `14/14` heavy slang sentences while fixing multi-sentence capitalization cleanly. |
 
 ---
 
@@ -24,12 +24,12 @@
 | **Order & Vocabulary** | **2-gram**, closed `LmVocabulary` (`119,741` strings, `581,601` bigrams; `~14 MB` Java `HashMap` heap) | **3-gram**, open 64-bit hashed (`FNV-1a + Murmur3`, zero string table; `3.12 MiB` heap at `v5`) |
 | **Bundled Size (`PR #383`)** | **`3.34 MiB` `.gz`** (`4.73 MiB` raw, `~4.99 B/ngram` `.gz`) | **`2.65 MiB` `.gz`** (`3.12 MiB` raw for `1,128,748` n-grams = **`2.46 B/ngram` `.gz`**) |
 | **Agglutinative OOVs (Live Probe)** | Productive inflections outside top `119K` collapse to `<unk>` (`idx=119740`): `P("beklemedeyim") = P("uzaklaşıyoruz") = P("xyzunk") = -15.3067`. | Tracks any inflected surface form meeting `u >= minUnigram` at `2.46 B` `.gz`; true OOVs fall back smoothly to `CharPhonotacticModel`. |
-| **`<unk>` Backoff Bug ([SmoothLm.java:551](file:///home/dndara/work/zemberek-nlp/lm/src/main/java/zemberek/lm/compression/SmoothLm.java#L551-L558))** | `unigramBackoffs[unkIdx] = 0.0f` while known words have negative Katz backoff (`"ve" = -0.765`), so **`P("geldim" \| "xyzunk") = -9.88` scores higher than `P("geldim" \| "ve") = -10.65`**. | Interpolation weights $\lambda_2, \lambda_3$ scale smoothly with exact history counts $c(h)/(c(h)+k)$; zero inverted backoff. |
+| **`<unk>` Backoff Bug ([SmoothLm.java:551](lm/src/main/java/zemberek/lm/compression/SmoothLm.java#L551-L558))** | `unigramBackoffs[unkIdx] = 0.0f` while known words have negative Katz backoff (`"ve" = -0.765`), so **`P("geldim" \| "xyzunk") = -9.88` scores higher than `P("geldim" \| "ve") = -10.65`**. | Interpolation weights $\lambda_2, \lambda_3$ scale smoothly with exact history counts $c(h)/(c(h)+k)$; zero inverted backoff. |
 | **Role in Normalization `v2`** | 4 auxiliary features (`F_SMOOTH_SPAN_LLR` weight in `perceptron.bin.gz` is `-0.0153` ≈ `0` vs. `+0.3881` on `F_CLEAN_SPAN_LLR`). Only legacy `TurkishSentenceNormalizer` and `TurkishSpellChecker` (`lm-unigram.slm`, `6.5 MB` raw) truly need `SmoothLm`. | Drives **6 subsystems**: 3-gram `F_CLEAN_SPAN_LLR` (spanning `1:2` clitic splits), unseen 1-edit typo rescue (`T_SRC_LEN_COST_GAIN`), clean/loanword attestation (`T_SRC_RAW_CLEAN_ATTEST`), clitic skip-LLR (`F_CLITIC_SKIP_LLR`), compound split/merge gates, and `casingLexicon`. |
 
 ### 1.2 Empirical `CleanWordLm` Size Curve (`1.8M → 20M` Clean Sentences from `refined/`)
 
-Measured on a `20,000,000`-sentence (`246.8M`-token) stream from [`/home/dndara/data/turkish/refined/`](file:///home/dndara/data/turkish/refined/) (`100%` morphology-parsed sentences filtered by [RefineCorpus.java](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/morphology/ambiguity/model/RefineCorpus.java); note `/home/dndara/data/turkish/clean/` is the *unrefined* raw dump and should not be used directly):
+Measured on a `20,000,000`-sentence (`246.8M`-token) stream from `~/data/turkish/refined/` (`100%` morphology-parsed sentences filtered by [RefineCorpus.java](experiment/src/main/java/zemberek/morphology/ambiguity/model/RefineCorpus.java); note `~/data/turkish/clean/` is the *unrefined* raw dump and should not be used directly):
 
 | Clean Sentences | Clean Tokens | **A. Fixed Cutoffs (`3/4/8`)**<br>Retained N-Grams | **A. Fixed**<br>Total `knowledge.bin.gz` | **B. $\sqrt{N}$-Scaled Cutoffs (`u/b/t`)** | **B. Scaled**<br>Retained N-Grams | **B. Scaled**<br>Total `knowledge.bin.gz` |
 | ---: | ---: | ---: | :---: | :---: | ---: | :---: |
@@ -45,7 +45,7 @@ Measured on a `20,000,000`-sentence (`246.8M`-token) stream from [`/home/dndara/
 
 ### 1.3 Live Experiments: `1.8M` → `5.0M (70/30)` → `8.0M (75/25)` (Uncurated vs. Curated & Pre-Pruned `v5`)
 
-**Shard Hygiene Audit Across `/home/dndara/data/turkish/refined/`:** Single-word morphological filtering in `RefineCorpus` cannot reject *parseable-but-wrong* forum tokens (`"doğrumu?"` parsed as `doğru+Pos_1sg+Acc`) or legal/listicle casing quirks. Sampling `100K` lines per shard verified:
+**Shard Hygiene Audit Across `~/data/turkish/refined/`:** Single-word morphological filtering in `RefineCorpus` cannot reject *parseable-but-wrong* forum tokens (`"doğrumu?"` parsed as `doğru+Pos_1sg+Acc`) or legal/listicle casing quirks. Sampling `100K` lines per shard verified:
 - **`5.0M (70/30)`**: `3.5M` news/Wikipedia/`tbmm` + `1.5M` `open-subtitles-tr-2018` (`750K`), `onedio` (`500K`), `shiftdelete` (`250K` n-grams only).
 - **`8.0M Uncurated (75/25)`**: Added `yargitay-karar` (`250K`), `tbmm-tutanak` (`450K`), `tbmm` (`450K`), and `forum.memurlar.net` (`250K` n-grams only) — exposing TitleCase legal headnotes in `yargitay` and `"doğrumu?"` clitic bugs in `memurlar`.
 - **`8.0M Curated (75/25)`**: **`6.0M` pure modern news + Wikipedia** (`radikal` `900K`, `cnn-turk` `800K`, `haberturk` `800K`, `www.dunya.com` `750K`, `vikipedi` `750K`, `iha` `700K`, `www.cnnturk.com` `500K`, `dunya` `400K`, `ntv-750k` `400K`; all `0.000%–0.003%` attached-`-mı?`, `casingLexicon` recorded **only** here) + **`2.0M` clean conversational/web** (`open-subtitles-tr-2018` `1.3M` + `onedio` `700K`, n-grams only).
@@ -91,9 +91,9 @@ Measured on a `20,000,000`-sentence (`246.8M`-token) stream from [`/home/dndara/
 
 ## 2. Parallel Pool Expansion (`75K → 85K` Verified Live; `→ 105K` Target)
 
-### 2.1 Live Verification on First `+10K` `v4.0` Heavy Slices (`train_slice_11` & `12`, `gemini-4-hydrogen` `MEDIUM`)
+### 2.1 Live Verification on First `+10K` `v4.0` Heavy Slices (`train_slice_11` & `12`, `gemini-2.5-pro` `MEDIUM`)
 
-Normalizing `train_slice_11` and `train_slice_12` (`10,000` sentences / `128,773` tokens) in [`llm_gold_v4/`](file:///home/dndara/data/turkish/normalization/noisy_tr_v2/full_110k/general/llm_gold_v4/) completed in `3.5 min` with **`100%` first-pass completion (`0` retries)**, **`-35.6%` fewer prompt tokens**, **`-18.3%` fewer total tokens**, **`301/301` (`100%`) unit abbreviations preserved**, and **`85.5%` internal `.!?` capitalization** (up from `8.7%` in `v3.1`).
+Normalizing `train_slice_11` and `train_slice_12` (`10,000` sentences / `128,773` tokens) in `llm_gold_v4/` completed in `3.5 min` with **`100%` first-pass completion (`0` retries)**, **`-35.6%` fewer prompt tokens**, **`-18.3%` fewer total tokens**, **`301/301` (`100%`) unit abbreviations preserved**, and **`85.5%` internal `.!?` capitalization** (up from `8.7%` in `v3.1`).
 
 Adding those `9,999` deduplicated sentences (`74,997 → 84,996`, `+13.3%`) expanded the mined parallel tables super-linearly on LOO-active multi-edit entries:
 - `parallel1ToN`: `97,884 →` **`108,982`** (`+11,098`) · **`total >= 3` (lexical gate): `31,934 → 35,240` (`+3,306`)** · **`edits >= 2` (LOO-active): `11,967 → 13,815` (`+15.4%`)** · `2:1`: `4,989 → 5,659` · `3:1`: `763 → 861`.
@@ -121,9 +121,9 @@ Adding those `9,999` deduplicated sentences (`74,997 → 84,996`, `+13.3%`) expa
 
 - **Why Adding `+5K` Medium + `+5K` Light Next Matters:** Adding `+10K` Heavy-only raised the Heavy share from `66.7% → 70.6%`, nudging `CleanFPR` slightly up (`0.342% → 0.371%`, `+4` FP on `Synth-Clean`). Adding `+5K` Medium + `+5K` Light (with or without `+10K` more Heavy) restores the `66.7%` (or `63.2%` at `95K`) multi-regime balance so `CleanFPR` settles back around `~0.30–0.33%` while retaining every lexical gain.
 
-### 2.3 Held-Out `test_slice_02_v4_hhigh` (`5,000` Heavy Sentences, Prompt `v4.0` + `gemini-4-hydrogen` `HIGH`)
+### 2.3 Held-Out `test_slice_02_v4_hhigh` (`5,000` Heavy Sentences, Prompt `v4.0` + `gemini-2.5-pro` `HIGH`)
 
-Created from the untouched stratified twin split [dev_slice_01.jsonl](file:///home/dndara/data/turkish/normalization/noisy_tr_v2/full_110k/general/slices/dev_slice_01.jsonl) (`0` overlap with `test_slice_01` or any `train_slice_*`; saved to [test_slice_02_v4_hhigh_normalized.jsonl](file:///home/dndara/data/turkish/normalization/noisy_tr_v2/full_110k/general/llm_gold_v4/normalized/test_slice_02_v4_hhigh_normalized.jsonl) and added to `loadForbiddenEvalFingerprints()`):
+Created from the untouched stratified twin split `dev_slice_01.jsonl` (`0` overlap with `test_slice_01` or any `train_slice_*`; saved to `test_slice_02_v4_hhigh_normalized.jsonl` and added to `loadForbiddenEvalFingerprints()`):
 - **Gold QC (`test_slice_01` `v3.1` vs. `test_slice_02` `v4.0`)**: Internal `.!?` capitalization rose `8.7% →` **`88.8%` (`341/384`)**, unit preservation `94.3% →` **`100.0%` (`159/159`)**, mid-word `'I'` dropped `12 → 4`, and prompt tokens dropped **`-35.5%`**.
 
 | Model | `test_slice_01` (`v3.1` `HIGH`)<br>`W-ERR` (`Edits` · `EM-Lo / Ca`) | **`test_slice_02_v4`** (`v4.0` `HIGH`)<br>`W-ERR` (`Edits` · `EM-Lo / Ca`) | `test_slice_02` `CleanFPR` |
@@ -136,7 +136,7 @@ Created from the untouched stratified twin split [dev_slice_01.jsonl](file:///ho
 | **`85K (+10Kv4) + 8M v5 NO Smooth`** *(Before starts fix)* | **`81.22%`** (`2,861` · `69.22 / 61.06%`) | **`80.60%`** (`3,003` · `68.08 / 55.34%`) | `1.418%` |
 | **`85K (+10Kv4) + 8M v5 NO Smooth` *(Fixed `computeSentenceStarts`)*** | `—` *(v3.1 gold is uncap)* | **`80.49%`** (**`68.12 / 57.52%`**, **`+2.16 pp` Ca**) | **`1.403%`** |
 
-- **`computeSentenceStarts()` Fixed & Verified ([experiment/.../SpanCandidateGenerator.java:4280-4455](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/normalization/v2/SpanCandidateGenerator.java#L4280-L4455) & [normalization/.../SpanCandidateGenerator.java:1245-1405](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/v2/SpanCandidateGenerator.java#L1245-L1405)):**
+- **`computeSentenceStarts()` Fixed & Verified ([experiment/.../SpanCandidateGenerator.java:4280-4455](experiment/src/main/java/zemberek/normalization/v2/SpanCandidateGenerator.java#L4280-L4455) & [normalization/.../SpanCandidateGenerator.java:1245-1405](normalization/src/main/java/zemberek/normalization/v2/SpanCandidateGenerator.java#L1245-L1405)):**
   - Replaced the legacy `v3.1` workaround (`Character.isUpperCase(t.surface().charAt(0))`) with `isTrueInternalSentenceBoundary()`, capitalizing `S2+` after genuine `.`/`!`/`?` boundaries (and `S1` when an input contains `2+` genuine sentences) while skipping abbreviations (`mah.`, `cad.`, `vs.`, `vb.`, `dr.`, `inş.`, single-letter initials), ordinals (`2.`), ellipses (`..`/`...`), broken URLs, `.com`/`.php` extensions, and quoted suffixes (`"EVET!"ler`).
   - **Result on `85K + 8M v5 NO Smooth`**: `test_slice_02_v4` `SentEM-Ca` jumped **`+2.16 pp` (`55.36% → 57.52%`, `+108` exact cased sentences — `~75%` of the lexically-exact multi-sentence ceiling, and `+3.52 pp` / `+176` sentences ahead of shipped `1.8M v5`'s `54.00%`)**, `Synth-Asciified` rose to **`97.55%` `W-ERR` (`88.70 / 87.30%` EM)**, and `Synth-Clean` showed **`0.000%` degradation** (`0.342%` `CleanFPR`).
 
@@ -146,7 +146,7 @@ Created from the untouched stratified twin split [dev_slice_01.jsonl](file:///ho
 
 ### 3.1 Why Over-Guiding in `v3.0` / `v3.1` Skewed Annotations
 
-Auditing `25,000` `v3.1`-cleaned sentences alongside our `nasty_5k` error log confirmed that **all three major systematic annotation quirks came from over-prescriptive prompt rules overriding `gemini-4-hydrogen`'s native Turkish knowledge**:
+Auditing `25,000` `v3.1`-cleaned sentences alongside our `nasty_5k` error log confirmed that **all three major systematic annotation quirks came from over-prescriptive prompt rules overriding `gemini-2.5-pro`'s native Turkish knowledge**:
 
 | Slice (`5,000` sents each) | Sent `#0`: `raw lo → gold lo` | Sent `#0`: `raw Up → gold Up` | **Internal `.!?` Boundary (`Sent1=Up`, `afterDot lo → lo`)** | Stray Mid-Word `'I'` | Turkish `I`/`İ` Front-Vowel Bug |
 | :--- | ---: | ---: | ---: | ---: | ---: |
@@ -161,15 +161,15 @@ Auditing `25,000` `v3.1`-cleaned sentences alongside our `nasty_5k` error log co
 
 ### 3.2 Controlled `100`-Sentence Batch A/B Verification (`v3.1` vs. Lean `v4.0`)
 
-Testing an `18`-line principle-only prompt (`-67%` shorter; zero typo, `SOMBAHÇEM`, `-cığım`, month, title, or tech word lists) on `100` stratified sentences (`gemini-4-hydrogen`, `HIGH`, `group_size=25`; full outputs in [PROMPT_AB_100_COMPARISON.md](file:///home/dndara/.gemini/antigravity/brain/e881e065-186e-4459-9937-8488961d947e/PROMPT_AB_100_COMPARISON.md)):
+Testing an `18`-line principle-only prompt (`-67%` shorter; zero typo, `SOMBAHÇEM`, `-cığım`, month, title, or tech word lists) on `100` stratified sentences (`gemini-2.5-pro`, `HIGH`, `group_size=25`; full outputs in [PROMPT_AB_100_COMPARISON.md](PROMPT_AB_100_COMPARISON.md)):
 - **`1,350 / 1,350` tokens (`100%`) complete**, `0` retries, **`-33.4%` fewer prompt tokens/sentence** (`244.9 → 163.0`), **`99.33%` lowercase token-slot agreement** (`1,341 / 1,350`).
-- **`14 / 14` exact matches on `T0_clean_control`** and **`14 / 14` exact matches on heavy slang/typos** — proving `gemini-4-hydrogen` natively handles TDK months (`19 Mart 2025` vs. `ocak ayında`), titles (`Berna Hanım`, `Abbas Bey`), brands/specs (`4K`, `iPhone`, `YouTube`, `David Bisbal`), diminutives (`Meltemciğim`), and spoken suffixes without word lists.
+- **`14 / 14` exact matches on `T0_clean_control`** and **`14 / 14` exact matches on heavy slang/typos** — proving `gemini-2.5-pro` natively handles TDK months (`19 Mart 2025` vs. `ocak ayında`), titles (`Berna Hanım`, `Abbas Bey`), brands/specs (`4K`, `iPhone`, `YouTube`, `David Bisbal`), diminutives (`Meltemciğim`), and spoken suffixes without word lists.
 - **Post-period multi-sentence capitalization fixed** (`#9–#24`), while deliberate single-sentence lowercase posts stayed lowercase.
 - **Only 2 project conventions needed explicit 1-phrase notes** (both now added): minimal-pair circumflexes (`hâlâ/kâr` rather than `mekân`/`herhâlde`) and keeping unit abbreviations unexpanded (`5 dk`, `13.000 km`).
 
 ### 3.3 Finalized Prompt `v4.0` & Gatekeeper Checks (Active in `normalize_nasty_batch.py`)
 
-Updated in [normalize_nasty_batch.py](file:///home/dndara/work/zemberek-nlp/experiment/scripts/normalization/normalize_nasty_batch.py#L35-L58) (alongside `mid_word_ascii_I` and `residual_allcaps_shouting` checks in `compute_qc_flags()` at [#L658-L671](file:///home/dndara/work/zemberek-nlp/experiment/scripts/normalization/normalize_nasty_batch.py#L658-L671)):
+Updated in [normalize_nasty_batch.py](experiment/scripts/normalization/normalize_nasty_batch.py#L35-L58) (alongside `mid_word_ascii_I` and `residual_allcaps_shouting` checks in `compute_qc_flags()` at [#L658-L671](experiment/scripts/normalization/normalize_nasty_batch.py#L658-L671)):
 
 ```text
 You are a Turkish computational linguist performing strict token-aligned orthographic normalization into standard TDK Turkish.

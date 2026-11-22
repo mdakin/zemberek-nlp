@@ -1,4 +1,4 @@
-package zemberek.normalization.v2;
+package zemberek.normalization.v2.research;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,9 +16,9 @@ import zemberek.core.turkish.SecondaryPos;
 import zemberek.morphology.TurkishMorphology;
 import zemberek.morphology.analysis.SingleAnalysis;
 import zemberek.morphology.morphotactics.TurkishMorphotactics;
-import zemberek.normalization.v2.NormV2Types.AlignedSentence;
-import zemberek.normalization.v2.NormV2Types.AlignedToken;
-import zemberek.normalization.v2.NormV2Types.CasingShape;
+import zemberek.normalization.v2.research.NormV2Types.AlignedSentence;
+import zemberek.normalization.v2.research.NormV2Types.AlignedToken;
+import zemberek.normalization.v2.research.NormV2Types.CasingShape;
 
 /**
  * Offline empirical knowledge miner &amp; <b>LOO (Leave-One-Sentence-Out)</b> jackknife helper for

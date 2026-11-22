@@ -1,10 +1,10 @@
 # Turkish Clean Corpus (`~/data/turkish/clean`) — Full Refinement & Morphological Analysis Overview
 
-- **Source Directory**: `/home/dndara/data/turkish/clean` (`30` `.txt` files, `17.68 GB` / `17,684.82 MB`)
-- **Refined Output Directory**: `/home/dndara/data/turkish/refined` (`30` `.txt` files, `9.87 GB` / `9,874.00 MB`)
-- **Full Auto-Generated Report**: [`corpus_refinement_report.md`](file:///home/dndara/work/zemberek-nlp/experiment/docs/model/corpus_refinement_report.md)
-- **Refiner Application**: [`RefineCorpus.java`](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/morphology/ambiguity/model/RefineCorpus.java)
-- **Launcher Script**: [`run_refine_corpus.sh`](file:///home/dndara/work/zemberek-nlp/experiment/scripts/model/run_refine_corpus.sh)
+- **Source Directory**: `~/data/turkish/clean` (`30` `.txt` files, `17.68 GB` / `17,684.82 MB`)
+- **Refined Output Directory**: `~/data/turkish/refined` (`30` `.txt` files, `9.87 GB` / `9,874.00 MB`)
+- **Full Auto-Generated Report**: [`corpus_refinement_report.md`](experiment/docs/model/corpus_refinement_report.md)
+- **Refiner Application**: [`RefineCorpus.java`](experiment/src/main/java/zemberek/morphology/ambiguity/model/RefineCorpus.java)
+- **Launcher Script**: [`run_refine_corpus.sh`](experiment/scripts/model/run_refine_corpus.sh)
 
 ---
 

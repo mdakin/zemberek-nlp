@@ -2,7 +2,7 @@
 
 **A Grounded Engineering Analysis of Multi-Span Lattices, Classical ML, and Practical Neural Reranking for Zemberek**
 
-Across the recent normalization and memory campaign (see [ZEMBEREK_NORMALIZATION_IMPROVEMENTS_REPORT.md](file:///home/dndara/.gemini/antigravity/brain/e881e065-186e-4459-9937-8488961d947e/ZEMBEREK_NORMALIZATION_IMPROVEMENTS_REPORT.md)), Zemberek's classical normalizer (`LatticeDeasciifier`, `ElongationNormalizer`, `InformalContractionExpander`, bug fixes in `#345`–`#355`, plus pending `#354`/`#356` and memory PRs `#359`–`#363`) improved `nasty_5k` word-error reduction from `70.03%` (`0.18.0`) up to `~77.4%` on the full patch stack while bringing warm JVM heap from `~270 MB` down to `~112–115 MB` (`#359 + #360 + #361 + #363`).
+Across the recent normalization and memory campaign (see [ZEMBEREK_NORMALIZATION_IMPROVEMENTS_REPORT.md](ZEMBEREK_NORMALIZATION_IMPROVEMENTS_REPORT.md)), Zemberek's classical normalizer (`LatticeDeasciifier`, `ElongationNormalizer`, `InformalContractionExpander`, bug fixes in `#345`–`#355`, plus pending `#354`/`#356` and memory PRs `#359`–`#363`) improved `nasty_5k` word-error reduction from `70.03%` (`0.18.0`) up to `~77.4%` on the full patch stack while bringing warm JVM heap from `~270 MB` down to `~112–115 MB` (`#359 + #360 + #361 + #363`).
 
 However, inspecting the **actual residual errors** on `nasty_5k` (`~7,900` word edits across `5,000` noisy forum/social sentences), `GECTurk` (`~690` edits), and `BOUN Clean` (`~150` diffs across `10,102` tokens) shows two very different truths:
 1. **Many remaining errors are lexicon/OOV coverage gaps or benchmark artifacts**—not mystical deep-learning problems.
@@ -14,7 +14,7 @@ If we designed `zemberek-normalization` from scratch today—reusing `TurkishMor
 
 ## 1. Grounded Diagnosis: What Actually Fails Today (and Why)
 
-Auditing actual error pairs from [bench_post345_all_v2data.json](file:///home/dndara/.gemini/antigravity/brain/e881e065-186e-4459-9937-8488961d947e/scratch/bench_post345_all_v2data.json) and [nasty_5000_pairs.tsv](file:///home/dndara/data/turkish/normalization/custom_benchmark/nasty_5k/llm_gold/exports/nasty_5000_pairs.tsv) separates real architectural limits from misdiagnosed dictionary bugs:
+Auditing actual error pairs from [bench_post345_all_v2data.json](bench_post345_all_v2data.json) and `nasty_5000_pairs.tsv` separates real architectural limits from misdiagnosed dictionary bugs:
 
 ### 1.1 Lexicon & Productive OOV Stem Gaps (Often Misattributed to the LM)
 Before blaming the language model, inspect what candidate generation actually produces:
@@ -24,7 +24,7 @@ Before blaming the language model, inspect what candidate generation actually pr
 - **Benchmark noise in `BOUN Clean`**: Out of `151` diffs on `BOUN Clean`, a sizable fraction are **actual typos/artifacts inside `BOUN` itself** (`"fondoten"` fixed to `"fondöten"`, `"t6ahmin"` fixed to `"tahmin"`, `"birşey"` split to `"bir şey"`, soft-hyphens `sektörün\u00adde`, and double-encoded UTF-8 mojibake `ayaäÿän`). Thus the *true* clean-text false-corruption rate is already closer to **`~0.8–1.0%`**, not `1.5%`.
 
 ### 1.2 Irreversible Greedy `preProcess()` Cascades (Segmentation Lock-In)
-In [TurkishSentenceNormalizer.java](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/TurkishSentenceNormalizer.java), `preProcess()` runs **6–7 consecutive 1-best string rewrites** (`deasciifyKnownWords` → lowercasing → `replaceCommon` → `normalizeElongations` → `combineNecessaryWords` → `splitNecessaryWords(false)` → `deasciifyValidWords` → `combineNecessaryWords` → `splitNecessaryWords(true)`) before `decode()` ever runs.
+In [TurkishSentenceNormalizer.java](normalization/src/main/java/zemberek/normalization/TurkishSentenceNormalizer.java), `preProcess()` runs **6–7 consecutive 1-best string rewrites** (`deasciifyKnownWords` → lowercasing → `replaceCommon` → `normalizeElongations` → `combineNecessaryWords` → `splitNecessaryWords(false)` → `deasciifyValidWords` → `combineNecessaryWords` → `splitNecessaryWords(true)`) before `decode()` ever runs.
 - Downstream Viterbi only sees a rigid `1:1` `List<Candidates>`. Once `preProcess()` commits to splitting or merging (or refuses to split `"sonrada"` in `"golden sonrada ataklarını"`), the sentence decoder cannot compare the split path against the unsplit path using surrounding context.
 
 ### 1.3 Upfront Orthographic Destruction (`toLowerCase` & Apostrophe Loss)
@@ -81,7 +81,7 @@ Any serious redesign must respect **measured Zemberek profiling facts**, not wis
 
 ## 3. Clean-Slate Classical Design: Multi-Span Lattice + Discriminative Scorer
 
-Following the exact recipe already proven in Zemberek's `FastPerceptronAmbiguityResolver` and [LatticeDeasciifier.java](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/deasciifier/latticedeasciifier/LatticeDeasciifier.java), the cleanest from-scratch architecture unifies normalization into **5 concrete stages**:
+Following the exact recipe already proven in Zemberek's `FastPerceptronAmbiguityResolver` and [LatticeDeasciifier.java](normalization/src/main/java/zemberek/normalization/deasciifier/latticedeasciifier/LatticeDeasciifier.java), the cleanest from-scratch architecture unifies normalization into **5 concrete stages**:
 
 ### Stage 1: Non-Destructive Span Tokenization & Orthographic Features
 - Preserve exact character offsets $[c_0, c_1)$, original casing shape (`ALL_CAPS`, `TitleCase`, `lower`, `Mixed`, `Digits+Suffix`), and punctuation/apostrophe attachment.

@@ -12,7 +12,7 @@ import json
 import time
 import subprocess
 
-DISTILLED_DIR = "/home/dndara/data/turkish/distilled"
+DISTILLED_DIR = os.path.expanduser("~/data/turkish/distilled")
 
 HELDOUT_CANDIDATES = os.path.join(DISTILLED_DIR, "golden_test_2500_candidates.jsonl")
 HELDOUT_ANNOTATED = os.path.join(DISTILLED_DIR, "golden_test_2500_annotated.jsonl")

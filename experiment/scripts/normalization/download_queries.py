@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 """
 Download and extract open Turkish search/query datasets and auxiliary spelling
 dictionaries under ~/data/turkish/normalization/queries/ and lexicons_external/.
@@ -23,7 +24,7 @@ import requests
 
 csv.field_size_limit(sys.maxsize)
 
-BASE_DIR = Path("/home/dndara/data/turkish/normalization")
+BASE_DIR = Path(os.path.expanduser("~/data/turkish/normalization"))
 SOURCE_CORPORA_DIR = BASE_DIR / "source_corpora"
 QUERIES_DIR = SOURCE_CORPORA_DIR / "queries"
 Q_RAW_DIR = QUERIES_DIR / "raw"

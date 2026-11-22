@@ -50,7 +50,7 @@ The package is organized around three primary hashing foundations and specialize
 ## 3. Critical Bugs & Behavioral Inconsistencies
 
 ### 3.1. `IntMap.getValues()` Silently Drops Negative Keys
-- **File**: [`IntMap.java:178-186`](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/collections/IntMap.java#L178-L186)
+- **File**: [`IntMap.java:178-186`](core/src/main/java/zemberek/core/collections/IntMap.java#L178-L186)
 - **Problem**:
   ```java
   public List<T> getValues() {
@@ -70,9 +70,9 @@ The package is organized around three primary hashing foundations and specialize
 
 ### 3.2. Non-Idempotent `Iterator.hasNext()` Violates `java.util.Iterator` Contract
 - **Files**:
-  - [`HashBase.java:240-253`](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/collections/HashBase.java#L240-L253) (`KeyIterator`)
-  - [`IntMap.java:258-272`](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/collections/IntMap.java#L258-L272) (`ValueIterator`)
-  - [`UIntMap.java:121-135`](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/collections/UIntMap.java#L121-L135) (`ValueIterator`)
+  - [`HashBase.java:240-253`](core/src/main/java/zemberek/core/collections/HashBase.java#L240-L253) (`KeyIterator`)
+  - [`IntMap.java:258-272`](core/src/main/java/zemberek/core/collections/IntMap.java#L258-L272) (`ValueIterator`)
+  - [`UIntMap.java:121-135`](core/src/main/java/zemberek/core/collections/UIntMap.java#L121-L135) (`ValueIterator`)
 - **Problem**:
   ```java
   @Override
@@ -93,7 +93,7 @@ The package is organized around three primary hashing foundations and specialize
 ---
 
 ### 3.3. `IntVector.expand(int)` Overwrites `size` and Fails on Zero Capacity
-- **File**: [`IntVector.java:126-130`](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/collections/IntVector.java#L126-L130)
+- **File**: [`IntVector.java:126-130`](core/src/main/java/zemberek/core/collections/IntVector.java#L126-L130)
 - **Problem**:
   ```java
   long newSize = size * 2L + offset;
@@ -110,14 +110,14 @@ The package is organized around three primary hashing foundations and specialize
 ---
 
 ### 3.4. `CompactIntMapBase.locate()` Never Reclaims `DELETED` Slots
-- **File**: [`CompactIntMapBase.java:141-156`](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/collections/CompactIntMapBase.java#L141-L156)
+- **File**: [`CompactIntMapBase.java:141-156`](core/src/main/java/zemberek/core/collections/CompactIntMapBase.java#L141-L156)
 - **Problem**: Unlike `HashBase` (which remembers the first deleted slot in `pointer`), `CompactIntMapBase.locate` skips `DELETED` slots and keeps probing until reaching `EMPTY`.
 - **Impact**: Deleted slots are never filled by subsequent `put()` operations until a full array resize. Additionally, `newCapacity()` unconditionally doubles capacity even if deleted entries account for 90% of the map, resulting in severe memory bloat under churn.
 
 ---
 
 ### 3.5. `LongUIntMap.hash()` Lacks Avalanche Mixing
-- **File**: [`LongUIntMap.java:41-43`](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/collections/LongUIntMap.java#L41-L43)
+- **File**: [`LongUIntMap.java:41-43`](core/src/main/java/zemberek/core/collections/LongUIntMap.java#L41-L43)
 - **Problem**:
   ```java
   private int hash(long key) {
@@ -131,7 +131,7 @@ The package is organized around three primary hashing foundations and specialize
 ## 4. Performance & Algorithmic Inefficiencies
 
 ### 4.1. Bit-by-Bit Scalar Loops in Bit Vectors
-- **`FixedBitVector.numberOfNewOneBitCount`** ([`FixedBitVector.java:92-100`](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/collections/FixedBitVector.java#L92-L100)):
+- **`FixedBitVector.numberOfNewOneBitCount`** ([`FixedBitVector.java:92-100`](core/src/main/java/zemberek/core/collections/FixedBitVector.java#L92-L100)):
   Loops from `0` to `length`, invoking `get(i)` twice per bit. Word-level bitwise operations achieve **32x–64x speedup**:
   ```java
   int total = 0;
@@ -139,25 +139,25 @@ The package is organized around three primary hashing foundations and specialize
     total += Integer.bitCount(~words[i] & other.words[i]);
   }
   ```
-- **`LongBitVector.getLastBitIndex`** ([`LongBitVector.java:128-135`](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/collections/LongBitVector.java#L128-L135)):
+- **`LongBitVector.getLastBitIndex`** ([`LongBitVector.java:128-135`](core/src/main/java/zemberek/core/collections/LongBitVector.java#L128-L135)):
   Scans bit-by-bit from `size-1` down to `0`. Scanning words in reverse with `Long.numberOfLeadingZeros(w)` replaces $O(\text{bits})$ with $O(\text{words})$.
 - **Static mask arrays**: `setMasks[32]` and `longSetMasks[64]` cause memory lookups. The JVM/x86/ARM natively masks shift amounts (`1 << n` and `1L << n`) in a single hardware cycle.
 
 ---
 
 ### 4.2. Redundant Lookups & Memory Allocation in `Histogram`
-- **Serialization probe overhead** ([`Histogram.java:95-98`](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/collections/Histogram.java#L95-L98)):
+- **Serialization probe overhead** ([`Histogram.java:95-98`](core/src/main/java/zemberek/core/collections/Histogram.java#L95-L98)):
   `for (String key : h.map) { dos.writeInt(h.getCount(key)); }`
   Iterates keys and re-hashes every entry to find its count. Direct iteration over internal `(key, count)` entries eliminates millions of redundant probes.
-- **Triple intermediate list allocation** ([`Histogram.java:430-434`](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/collections/Histogram.java#L430-L434)):
+- **Triple intermediate list allocation** ([`Histogram.java:430-434`](core/src/main/java/zemberek/core/collections/Histogram.java#L430-L434)):
   `getSortedList()` allocates an outer `ArrayList`, generates a sorted entry list, runs `.stream().map(...).collect(toList())`, and then calls `addAll(...)`.
-- **Set intersection sorting** ([`Histogram.java:445`](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/collections/Histogram.java#L445)):
+- **Set intersection sorting** ([`Histogram.java:445`](core/src/main/java/zemberek/core/collections/Histogram.java#L445)):
   `getIntersectionOfKeys` sorts the smaller histogram by frequency before intersecting, adding an unnecessary $O(N \log N)$ sort to an $O(N)$ operation.
 
 ---
 
 ### 4.3. Heavy Node Overhead in `Trie<T>`
-- **File**: [`Trie.java:222-258`](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/collections/Trie.java#L222-L258)
+- **File**: [`Trie.java:222-258`](core/src/main/java/zemberek/core/collections/Trie.java#L222-L258)
 - Every branching node allocates an `IntMap<Node<T>>`, which instantiates `int[4]` and `Object[4]` arrays.
 - In Turkish vocabulary tries, most non-leaf nodes have only 1 or 2 children. Storing compact `char[]` and `Node[]` child arrays reduces trie heap footprint by ~70% while improving CPU cache locality.
 - Uses legacy synchronized `StringBuffer` in `dump()` and `toDeepString()`.

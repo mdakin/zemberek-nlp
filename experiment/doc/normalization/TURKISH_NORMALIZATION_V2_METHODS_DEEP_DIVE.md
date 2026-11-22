@@ -1,8 +1,8 @@
 # Turkish Normalization v2: Architecture, Algorithms, & Benchmark Results
 
 **Date**: November 15, 2026  
-**Package**: [`zemberek.normalization.v2`](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/normalization/v2)  
-**Companion Empirical Report**: [DATA_DRIVEN_TURKISH_NORMALIZATION_V2.md](file:///home/dndara/work/zemberek-nlp/experiment/doc/normalization/DATA_DRIVEN_TURKISH_NORMALIZATION_V2.md)
+**Package**: [`zemberek.normalization.v2`](experiment/src/main/java/zemberek/normalization/v2)  
+**Companion Empirical Report**: [DATA_DRIVEN_TURKISH_NORMALIZATION_V2.md](experiment/doc/normalization/DATA_DRIVEN_TURKISH_NORMALIZATION_V2.md)
 
 ---
 
@@ -12,10 +12,10 @@
 
 | Acronym | Full Expansion | Meaning in `zemberek.normalization.v2` |
 | :--- | :--- | :--- |
-| **`GBDT`** | **Gradient Boosted Decision Trees** | Additive ensemble of shallow regression trees trained sequentially via second-order Newton steps on logistic loss ([`ObliviousGbdt.java`](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/normalization/v2/ObliviousGbdt.java#L10-L53)). |
+| **`GBDT`** | **Gradient Boosted Decision Trees** | Additive ensemble of shallow regression trees trained sequentially via second-order Newton steps on logistic loss ([`ObliviousGbdt.java`](experiment/src/main/java/zemberek/normalization/v2/ObliviousGbdt.java#L10-L53)). |
 | **`Oblivious GBDT`** | **Symmetric (`CatBoost`-Style) GBDT** | Decision trees where **every node at depth $d$ tests the exact same `(feature, threshold)`**, compiling each depth-$6$ tree into a branch-minimal 64-float lookup table (`292 B/tree`, `115.1 KB` total). |
-| **`PA-I`** | **Passive-Aggressive (Type-I) Max-Margin Perceptron** | Online structured learning rule enforcing a task-specific margin proportional to mistake severity $\mathcal{L}(\tilde{\pi}, \pi^*)$, clipped by aggressiveness $C = 0.25$ ([`SpanLatticePerceptronNormalizer.java`](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/normalization/v2/SpanLatticePerceptronNormalizer.java#L11-L40)). |
-| **`MEMM` / `DP`** | **Maximum Entropy Markov Model / Dynamic Programming** | Locally normalized sequence model where outgoing candidate logits at boundary $i$ pass through `logSoftmax` before dynamic programming (`DP`), eliminating multi-span path-length bias ([`TwoStageGbdtNormalizer.java`](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/normalization/v2/TwoStageGbdtNormalizer.java#L29-L51)). |
+| **`PA-I`** | **Passive-Aggressive (Type-I) Max-Margin Perceptron** | Online structured learning rule enforcing a task-specific margin proportional to mistake severity $\mathcal{L}(\tilde{\pi}, \pi^*)$, clipped by aggressiveness $C = 0.25$ ([`SpanLatticePerceptronNormalizer.java`](experiment/src/main/java/zemberek/normalization/v2/SpanLatticePerceptronNormalizer.java#L11-L40)). |
+| **`MEMM` / `DP`** | **Maximum Entropy Markov Model / Dynamic Programming** | Locally normalized sequence model where outgoing candidate logits at boundary $i$ pass through `logSoftmax` before dynamic programming (`DP`), eliminating multi-span path-length bias ([`TwoStageGbdtNormalizer.java`](experiment/src/main/java/zemberek/normalization/v2/TwoStageGbdtNormalizer.java#L29-L51)). |
 | **`DAG`** | **Directed Acyclic Graph** | Multi-span word/morpheme lattice (`SentenceLattice`) over token boundaries $0 \dots N$ supporting `1:1` rewrites, `1:2` splits, and `2:1`/`3:1` merges simultaneously. |
 | **`OOF`** | **Out-Of-Fold Cross-Fitting** | Training $K = 4$ disjoint `GBDT` folds so `Hybrid` perceptron training sees genuine held-out `GBDT` log-probabilities rather than overconfident in-sample scores. |
 | **`LOO`** | **Leave-One-Sentence-Out Jackknife** | Subtracting the current training sentence's `(raw -> gold)` counts from mined parallel tables during feature extraction so `1`-count training typos mimic unseen test `OOV`s. |
@@ -70,7 +70,7 @@ flowchart TD
 
 Both normalizers deliberately share the exact same tokenization, candidate generation DAG, truecasing/TDK formatting engine, and language-model scoring primitives so every accuracy or speed difference reflects **model mechanics** rather than preprocessing differences.
 
-### 2.1 Non-Destructive Span Tokenization & Detokenization ([NormV2Types.java](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/normalization/v2/NormV2Types.java))
+### 2.1 Non-Destructive Span Tokenization & Detokenization ([NormV2Types.java](experiment/src/main/java/zemberek/normalization/v2/NormV2Types.java))
 - **`SpanToken`** wraps Zemberek's `TurkishTokenizer.DEFAULT` without mutating characters, precomputing:
   - Turkish-locale lowercase `lower` (`I -> ı`, `İ -> i`, curly `’ -> '`),
   - ASCII projection `ascii` (`ş->s, ı->i, ğ->g, ü->u, ö->o, ç->c`),
@@ -80,7 +80,7 @@ Both normalizers deliberately share the exact same tokenization, candidate gener
   - `hasUpperAsciiAmbiguousI()` for ALL-CAPS words typed on ASCII keyboards (`"BIZIM"`, `"IYI"`, `"BIZLERIDE"`) where `'I'` (`U+0049`) is ambiguous between `'ı'` and `'i'`.
 - **`reconstructText`** deterministically re-attaches decoded multi-span arcs into natural Turkish text, handling opening/closing quotes (`"..."`, `'...'`, `“...”`, `«...»`), ellipsis `…`, numeric decimals/ranges (`3,5`, `2020-2024`), slashes (`7/24`), percent signs (`%50`), and multi-part emoticons.
 
-### 2.2 Dual-Source Corpus Mining & Zero-Leakage `LOO` Jackknife ([ParallelCorpusMiner.java](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/normalization/v2/ParallelCorpusMiner.java))
+### 2.2 Dual-Source Corpus Mining & Zero-Leakage `LOO` Jackknife ([ParallelCorpusMiner.java](experiment/src/main/java/zemberek/normalization/v2/ParallelCorpusMiner.java))
 `ParallelCorpusMiner` extracts complementary signals from two corpora:
 
 1. **Unlabeled Clean Turkish Corpus (`1,800,000` sentences)** (`mineCleanCorpus`):
@@ -103,7 +103,7 @@ Both normalizers deliberately share the exact same tokenization, candidate gener
    >
    > `applyLeaveOneSentenceOut` subtracts the current training sentence's exact `(raw -> gold)` contribution from `totalCount`, `keepCount`, and `targetCount` **before** oracle projection and feature extraction, clearing `SRC_PARALLEL_*` bits when `looCount == 0` and deleting singleton memorization arcs (`sourceMask == 0`).
 
-### 2.3 Multi-Span Candidate DAG & Runtime Caches ([SpanCandidateGenerator.java](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/normalization/v2/SpanCandidateGenerator.java))
+### 2.3 Multi-Span Candidate DAG & Runtime Caches ([SpanCandidateGenerator.java](experiment/src/main/java/zemberek/normalization/v2/SpanCandidateGenerator.java))
 For an $N$-token sentence, `buildLattice` constructs a directed acyclic multigraph over vertices $0 \dots N$ (`1.76` arcs/token on average, achieving **`98.09%` lowercase span recall**, **`96.48%` cased span recall**, and **`80.04%` full-sentence exact oracle** on `test_slice_01`):
 
 | Stage | Span | Source Bit(s) | Mechanism & Linguistic Role |
@@ -139,7 +139,7 @@ Comparing a `1:1` arc (`evde`), a `1:2` split (`ev de`), and a `2:1` merge (`ev 
 
 ## 3. Method 1 Deep Dive: `SpanLatticePerceptronNormalizer`
 
-**Implementation**: [`SpanLatticePerceptronNormalizer.java`](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/normalization/v2/SpanLatticePerceptronNormalizer.java)
+**Implementation**: [`SpanLatticePerceptronNormalizer.java`](experiment/src/main/java/zemberek/normalization/v2/SpanLatticePerceptronNormalizer.java)
 
 ### 3.1 Structured Semi-Markov Linear Scoring & Beam Viterbi
 Given a `SentenceLattice` $\mathcal{L}(x)$ over $N$ raw tokens, a valid segmentation-and-normalization path $\pi = (a_1, a_2, \dots, a_K)$ tiles $[0, N)$ contiguously. `SpanLatticePerceptronNormalizer` scores a path globally as a **joint linear model** over dense continuous features $\boldsymbol{\phi}_{\text{dense}} \in \mathbb{R}^{19}$ and sparse binary indicator features $\boldsymbol{\phi}_{\text{sparse}} \in \{0, 1\}^D$:
@@ -174,25 +174,25 @@ $$\eta = \min\!\left(C,\; \frac{\xi}{0.25\,\|\Delta \boldsymbol{\phi}_{\text{den
 with lazy cumulative step averaging $\bar{w} = w_T - \frac{1}{T} \sum_t t \cdot \Delta w_t$ in $O(1)$ per active feature.
 
 ### 3.3 Feature Engineering & `MultiLevelMphf` Compression
-Every feature slot and hashed template ID is documented inline in [`SpanLatticePerceptronNormalizer.java`](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/normalization/v2/SpanLatticePerceptronNormalizer.java#L43-L180) (and `SRC_*` source flags in [`NormV2Types.java`](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/normalization/v2/NormV2Types.java#L19-L80)):
-- **19 Continuous Features (`F_SMOOTH_FWD2 .. F_CLITIC_SKIP_LLR`, [lines 50–106](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/normalization/v2/SpanLatticePerceptronNormalizer.java#L50-L106))**:
+Every feature slot and hashed template ID is documented inline in [`SpanLatticePerceptronNormalizer.java`](experiment/src/main/java/zemberek/normalization/v2/SpanLatticePerceptronNormalizer.java#L43-L180) (and `SRC_*` source flags in [`NormV2Types.java`](experiment/src/main/java/zemberek/normalization/v2/NormV2Types.java#L19-L80)):
+- **19 Continuous Features (`F_SMOOTH_FWD2 .. F_CLITIC_SKIP_LLR`, [lines 50–106](experiment/src/main/java/zemberek/normalization/v2/SpanLatticePerceptronNormalizer.java#L50-L106))**:
   - `SmoothLm` (2-gram): forward bigram, right-lookahead bigram, internal split bigram, exact span LLR (`0..3`),
   - `CleanWordLm` (3-gram): forward trigram, right-lookahead trigram, exact span LLR (`4..6`),
   - Empirical priors & edit geometry: `parallelProb`, `parallelLogCount`, `suffixPrecision`, `editCost`, `diacriticDiffs` (`7..11`),
   - Structural & orthographic indicators: `isIdentityLower`, `isRegularMorph`, `charPhonotactics`, optional `cachedGbdtScore`, `sentenceAsciiRatio` on diacritic-restoring arcs, `exactInformalMorph` vs `stripsExplicitDiacritic`, and `cliticSkipLlr` (`12..18`).
-- **23 Hashed 64-Bit Sparse Feature Templates (`T_LEX_LOWER_PAIR .. T_TRANS_TAG_WORD`, [lines 112–180](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/normalization/v2/SpanLatticePerceptronNormalizer.java#L112-L180))**:
+- **23 Hashed 64-Bit Sparse Feature Templates (`T_LEX_LOWER_PAIR .. T_TRANS_TAG_WORD`, [lines 112–180](experiment/src/main/java/zemberek/normalization/v2/SpanLatticePerceptronNormalizer.java#L112-L180))**:
   - **Open-vocabulary safety**: Exact lexical rewrite templates fire **only when `rawParallelTotal >= 3`**, forcing rare/unseen words onto generalizable morphological, LM, source-mask, and syntactic templates.
   - **Syntactic Clitic & Merge Templates**: Conjoins split tail (`de`/`da`/`mi`/`ki`) $\times$ `firstWordMorphTag` $\times$ `headSyntaxClass` (`FINITE_OR_CONVERB` vs `PRON_ADV_CONJ` vs `NOMINAL`) $\times$ `nextLex`, sentence `?` presence, `2:1` merge `coarseMorphTag x sourceMask x nextLex`, pronoun–verb person agreement, casing transitions, and TDK apostrophe add/drop.
   - **Decoded Markov Transitions**: `(prev1Lex, firstWordLower)`, `(prevMorphTag, firstWordMorphTag)`, `(prev1Lex, firstWordMorphTag)`, and `(prevMorphTag, firstWordLower)`.
 - **Zero-Collision-Overhead `MultiLevelMphf` Compression (`QuantizedWeightTable` + `MphfCountMap`)**:
-  1. **`perceptron.bin.gz` (`QuantizedWeightTable`)**: All active features (`809,592` sparse features in `v2.4` + `20` dense floats) are compiled into [`QuantizedWeightTable`](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/deasciifier/latticedeasciifier/QuantizedWeightTable.java) (`MultiLevelMphf` `~0.40 B/key` + `16-bit` fingerprints + `8-bit` Lloyd-Max k-means palette), occupying **`2.62 MiB` uncompressed / `2.55 MiB` `.gz`** (`~3.40 bytes/feature`).
-  2. **`knowledge.bin.gz` (`SNAPSHOT_VERSION = 5`, `MphfCountMap`)**: [`NormalizationKnowledge`](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/v2/NormalizationKnowledge.java) compresses `CleanWordLm` (`283,038` unigrams `u>=3`, `729,631` bigrams `b>=4`, `116,079` trigrams `t>=8`) via `MultiLevelMphf` + packed `12-bit` fingerprints + `8-bit` hybrid exact/log count codebooks (`2.90 B/entry` raw, `2.46 B/entry` `.gz`), front-coded string tables, deduplicated pure-lowercase `casingLexicon`, and `int8`-quantized `CharPhonotacticModel` — shrinking `knowledge.bin.gz` from **`76.6 MB` raw (`v3`) / `30.71 MiB` (`v4` `.gz`) → `3.99 MiB` (`4.18 MB`) `.gz`** (`-87.0%`, `6.38 MiB` uncompressed) at `< 0.30 pp` `W-ERR` delta (`80.47%` `test_slice_01` / `90.19%` `nasty_5k`; see [`MODEL_COMPRESSION_REPORT.md`](file:///home/dndara/work/zemberek-nlp/MODEL_COMPRESSION_REPORT.md)).
+  1. **`perceptron.bin.gz` (`QuantizedWeightTable`)**: All active features (`809,592` sparse features in `v2.4` + `20` dense floats) are compiled into [`QuantizedWeightTable`](normalization/src/main/java/zemberek/normalization/deasciifier/latticedeasciifier/QuantizedWeightTable.java) (`MultiLevelMphf` `~0.40 B/key` + `16-bit` fingerprints + `8-bit` Lloyd-Max k-means palette), occupying **`2.62 MiB` uncompressed / `2.55 MiB` `.gz`** (`~3.40 bytes/feature`).
+  2. **`knowledge.bin.gz` (`SNAPSHOT_VERSION = 5`, `MphfCountMap`)**: [`NormalizationKnowledge`](normalization/src/main/java/zemberek/normalization/v2/NormalizationKnowledge.java) compresses `CleanWordLm` (`283,038` unigrams `u>=3`, `729,631` bigrams `b>=4`, `116,079` trigrams `t>=8`) via `MultiLevelMphf` + packed `12-bit` fingerprints + `8-bit` hybrid exact/log count codebooks (`2.90 B/entry` raw, `2.46 B/entry` `.gz`), front-coded string tables, deduplicated pure-lowercase `casingLexicon`, and `int8`-quantized `CharPhonotacticModel` — shrinking `knowledge.bin.gz` from **`76.6 MB` raw (`v3`) / `30.71 MiB` (`v4` `.gz`) → `3.99 MiB` (`4.18 MB`) `.gz`** (`-87.0%`, `6.38 MiB` uncompressed) at `< 0.30 pp` `W-ERR` delta (`80.47%` `test_slice_01` / `90.19%` `nasty_5k`; see [`MODEL_COMPRESSION_REPORT.md`](MODEL_COMPRESSION_REPORT.md)).
 
 ---
 
 ## 4. Method 2 Deep Dive: `TwoStageGbdtNormalizer` & `ObliviousGbdt`
 
-**Implementations**: [`ObliviousGbdt.java`](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/normalization/v2/ObliviousGbdt.java) & [`TwoStageGbdtNormalizer.java`](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/normalization/v2/TwoStageGbdtNormalizer.java)
+**Implementations**: [`ObliviousGbdt.java`](experiment/src/main/java/zemberek/normalization/v2/ObliviousGbdt.java) & [`TwoStageGbdtNormalizer.java`](experiment/src/main/java/zemberek/normalization/v2/TwoStageGbdtNormalizer.java)
 
 ### 4.1 Symmetric (Oblivious) Newton Trees (`ObliviousGbdt`)
 In an **Oblivious (Symmetric) Decision Tree** (`CatBoost`-style), **every node at depth $d \in \{0, \dots, D-1\}$ shares the exact same `(feature[d], threshold[d])` test**:
@@ -220,11 +220,11 @@ flowchart TD
    $$\mathcal{G}(f, b) = \sum_{u=0}^{2^d - 1} \left( \frac{G_{u,L}^2}{H_{u,L} + \lambda} + \frac{G_{u,R}^2}{H_{u,R} + \lambda} - \frac{G_u^2}{H_u + \lambda} \right), \qquad \Delta v_\ell = \eta \frac{G_\ell}{H_\ell + \lambda}$$
 
 ### 4.2 Stage 1 (`KeepGatekeeper`) + Stage 2 (`CandidateReranker`) + Exact MEMM Span DP
-All `16` Stage-1 feature constants (`G_WORD_LEN .. G_CLEAN_UNIGRAM`) and `45` Stage-2 feature constants (`R_IS_ID_SURF .. R_SRC_SHORTHAND_ABJAD`) are documented inline in [`TwoStageGbdtNormalizer.java`](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/normalization/v2/TwoStageGbdtNormalizer.java#L54-L253):
-1. **Stage 1 — `KeepGatekeeper` (`80` depth-5 trees, `16` `G_*` features, [lines 65–112](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/normalization/v2/TwoStageGbdtNormalizer.java#L65-L112))**:
+All `16` Stage-1 feature constants (`G_WORD_LEN .. G_CLEAN_UNIGRAM`) and `45` Stage-2 feature constants (`R_IS_ID_SURF .. R_SRC_SHORTHAND_ABJAD`) are documented inline in [`TwoStageGbdtNormalizer.java`](experiment/src/main/java/zemberek/normalization/v2/TwoStageGbdtNormalizer.java#L54-L253):
+1. **Stage 1 — `KeepGatekeeper` (`80` depth-5 trees, `16` `G_*` features, [lines 65–112](experiment/src/main/java/zemberek/normalization/v2/TwoStageGbdtNormalizer.java#L65-L112))**:
    - Trained with `3.2x` positive recall weighting to predict $P(\text{needs\_edit} \mid t_i, \text{context})$ from $O(1)$ lexical/LM signals.
    - Tokens with `cliticTailHint`, `nextMergeHint`, or `'` never skip expansion; high-confidence clean tokens ($P < 0.022$) bypass expensive morphological/spellcheck expansion (while lightweight curated/compositional shorthands still check OOV tokens).
-2. **Stage 2 — `CandidateReranker` (`360` depth-6 trees, `45` `R_*` features, [lines 118–253](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/normalization/v2/TwoStageGbdtNormalizer.java#L118-L253)) & Slot-Relative Margins**:
+2. **Stage 2 — `CandidateReranker` (`360` depth-6 trees, `45` `R_*` features, [lines 118–253](experiment/src/main/java/zemberek/normalization/v2/TwoStageGbdtNormalizer.java#L118-L253)) & Slot-Relative Margins**:
    - Trained on ambiguous slots (`|A(i)| > 1`) with `cleanProtectionWeight = 1.35f` on clean slots.
    - Includes **three slot-relative margin features** (`R_SMOOTH_REL_MARGIN`, `R_CLEAN_REL_MARGIN`, `R_PARALLEL_REL_MARGIN`), e.g. $\Delta_{\text{clean}}(a) = \text{LLR}_{\text{clean}}(a) - \max_{a' \in A(i)} \text{LLR}_{\text{clean}}(a') \le 0$, giving binary trees listwise visibility into sibling competition.
 3. **Exact Semi-Markov MEMM Decoding (`decodeSpanDp`)**:
@@ -256,7 +256,7 @@ All `16` Stage-1 feature constants (`G_WORD_LEN .. G_CLEAN_UNIGRAM`) and `45` St
 
 ## 6. Benchmark Results: Accuracy & Single-Thread Speed (`75K` Multi-Regime Pool)
 
-All models below are trained on the `75,000`-sentence multi-regime pool (`50K` Heavy + `15K` Medium + `10K` Low; `74,997` after deduplication + `1,800` `D-Lite` shorthand/Abjad calibration examples) + `1.80M` clean Turkish sentences ([`norm_v2_benchmark_results.json`](file:///home/dndara/work/zemberek-nlp/experiment/target/norm_v2_results/norm_v2_benchmark_results.json)).
+All models below are trained on the `75,000`-sentence multi-regime pool (`50K` Heavy + `15K` Medium + `10K` Low; `74,997` after deduplication + `1,800` `D-Lite` shorthand/Abjad calibration examples) + `1.80M` clean Turkish sentences ([`norm_v2_benchmark_results.json`](experiment/target/norm_v2_results/norm_v2_benchmark_results.json)).
 
 ### 6.1 Accuracy Across All 5 Real-World Unseen Benchmarks
 

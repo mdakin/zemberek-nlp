@@ -16,8 +16,8 @@ import json
 import time
 import subprocess
 
-REPO_ROOT = "/home/dndara/work/zemberek-nlp"
-DISTILLED_DIR = "/home/dndara/data/turkish/distilled"
+REPO_ROOT = "."
+DISTILLED_DIR = os.path.expanduser("~/data/turkish/distilled")
 DATA_DIR = os.path.join(REPO_ROOT, "data/ambiguity")
 
 FILE_20K = os.path.join(DISTILLED_DIR, "distilled_20k_canonical.jsonl")

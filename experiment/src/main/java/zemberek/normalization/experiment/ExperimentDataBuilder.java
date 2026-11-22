@@ -37,7 +37,7 @@ import zemberek.tokenization.TurkishTokenizer;
  */
 public final class ExperimentDataBuilder {
 
-  private static final Path DEFAULT_CORPUS_ROOT = Paths.get("/home/dndara/data/turkish");
+  private static final Path DEFAULT_CORPUS_ROOT = Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "");
 
   public static final class NormalizationResources {
     public final Path dataRoot;

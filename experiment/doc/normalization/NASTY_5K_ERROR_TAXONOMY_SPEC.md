@@ -1,7 +1,7 @@
 # Zemberek `nasty_5k` Error Taxonomy & Batch Cataloging Specification
 
 ## Strict Process Rules (MANDATORY)
-1. **Small-Batch Reading ONLY**: Read `/home/dndara/.gemini/antigravity/brain/e881e065-186e-4459-9937-8488961d947e/scratch/nasty5k_errors_for_review.txt` using `read_file` in chunks of **AT MOST 25 LINES** (`EndLine - StartLine + 1 <= 25`).
+1. **Small-Batch Reading ONLY**: Read `scratch/nasty5k_errors_for_review.txt` using `read_file` in chunks of **AT MOST 25 LINES** (`EndLine - StartLine + 1 <= 25`).
 2. **NO Auto-Tagging Scripts**: You are strictly FORBIDDEN from writing any Python, bash, or Java script to classify, regex-match, or heuristically tag sentences. Every batch of <=25 sentences MUST be read directly by you (the LLM) in context (`RAW`, `ZEM`, `GOLD`, `DIFFS`) and tagged using genuine Turkish linguistic & morphological judgment, appending the tagged JSONL lines via `write_file(..., Append=true)` after reading each 25-line batch.
 3. **1-to-1 Diff Span Alignment**:
    - Each line in `nasty5k_errors_for_review.txt` corresponds to the exact same line number (`err_idx`) in `nasty5k_errors_for_review.jsonl`.

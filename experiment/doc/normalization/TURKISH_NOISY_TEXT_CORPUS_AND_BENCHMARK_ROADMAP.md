@@ -1,6 +1,6 @@
 # Turkish Noisy Text Corpus & Normalization Benchmark Roadmap
 
-This document complements [TURKISH_NORMALIZATION_INVESTIGATION_AND_ROADMAP.md](file:///home/dndara/.gemini/antigravity/brain/e13f6e6b-cb12-4920-b467-a54e05357b91/TURKISH_NORMALIZATION_INVESTIGATION_AND_ROADMAP.md) following the integration of [`LatticeDeasciifier`](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/deasciifier/latticedeasciifier/LatticeDeasciifier.java) (PR `#345`). Before executing Phases 1–3 of the normalization and spell-checker improvements, Zemberek requires reproducible, realistic noisy Turkish corpora and standardized evaluation suites.
+This document complements [TURKISH_NORMALIZATION_INVESTIGATION_AND_ROADMAP.md](TURKISH_NORMALIZATION_INVESTIGATION_AND_ROADMAP.md) following the integration of [`LatticeDeasciifier`](normalization/src/main/java/zemberek/normalization/deasciifier/latticedeasciifier/LatticeDeasciifier.java) (PR `#345`). Before executing Phases 1–3 of the normalization and spell-checker improvements, Zemberek requires reproducible, realistic noisy Turkish corpora and standardized evaluation suites.
 
 ---
 
@@ -9,7 +9,7 @@ This document complements [TURKISH_NORMALIZATION_INVESTIGATION_AND_ROADMAP.md](f
 Improving `zemberek-normalization` without over-normalizing clean prose requires separating **unlabeled corpus mining** from **gold parallel benchmarking**:
 
 1. **Unlabeled Realistic Noisy Corpus (`50M–200M` tokens)**
-   - Regenerating `lookup-from-graph` and `split` with [`NoisyWordsLexiconGenerator.java`](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/NoisyWordsLexiconGenerator.java) after fixing Bug `B4` (chunk context-count wipeout and inverted Hassan & Menezes hitting-time similarity).
+   - Regenerating `lookup-from-graph` and `split` with [`NoisyWordsLexiconGenerator.java`](normalization/src/main/java/zemberek/normalization/NoisyWordsLexiconGenerator.java) after fixing Bug `B4` (chunk context-count wipeout and inverted Hassan & Menezes hitting-time similarity).
    - Estimating noisy-channel edit/source priors (`A1`), clitic `-de/-da` PMI statistics (`A5`), real-world OOV frequency distributions, and large-scale throughput / `p95` tail latency.
 2. **Gold Parallel Normalization Benchmark (`dev` + blind `test`)**
    - Measuring **W-NUT 2021 Error Reduction Rate (`ERR`)**:
@@ -44,7 +44,7 @@ Live inspection of public repositories and dataset schemas reveals **very few** 
 | **`eminesener/normalization`** | HF `eminesener/normalization` | Lexicon & frequency TSVs (`normalization.tsv`, `wiki_vocab.tsv`) | Lookup dictionaries & context counts, not parallel test sentences | **No** | Lexicon cross-check only |
 | **`UD_Turkish_German-SAGT` / `UD_Turkish-BOUN`/`IMST`** | GitHub Universal Dependencies / local `data/` | Local UD files have `0` `CorrectForm=`/`Typo=Yes` tokens | `SAGT` stores already-normalized surfaces | **No** | Clean syntax reference only |
 | **İTÜ `IWT` & `BTS`** | `tools.nlp.itu.edu.tr` (Torunoğlu-Selamet & Eryiğit) | `IWT`: `~5K` sents (`39,152` tok)<br>`BTS`: `26K+` tweets (`385,568` tok) | Manually normalized Turkish Web 2.0 & tweets | **License-gated** (signed EULA required) | Cannot bundle in open repo; optional private academic validation |
-| **Existing Zemberek Test Resources** | [`mini-noisy-corpus.txt`](file:///home/dndara/work/zemberek-nlp/normalization/src/test/resources/normalization/mini-noisy-corpus.txt), [`spell-checker-test.txt`](file:///home/dndara/work/zemberek-nlp/normalization/src/test/resources/spell-checker-test.txt), [`NormalizationBenchmarkSuite.java`](file:///home/dndara/work/zemberek-nlp/experiment/src/main/java/zemberek/normalization/experiment/NormalizationBenchmarkSuite.java) | `13` noisy lines, `205` clean lines, `130` curated experimental sentences | Smoke & prototype ablation tests | **Too small** (`80` noisy + `50` clean in experiment) | Keep as fast unit smoke tests alongside full benchmark |
+| **Existing Zemberek Test Resources** | [`mini-noisy-corpus.txt`](normalization/src/test/resources/normalization/mini-noisy-corpus.txt), [`spell-checker-test.txt`](normalization/src/test/resources/spell-checker-test.txt), [`NormalizationBenchmarkSuite.java`](experiment/src/main/java/zemberek/normalization/experiment/NormalizationBenchmarkSuite.java) | `13` noisy lines, `205` clean lines, `130` curated experimental sentences | Smoke & prototype ablation tests | **Too small** (`80` noisy + `50` clean in experiment) | Keep as fast unit smoke tests alongside full benchmark |
 
 ### 2.2 Key Empirical Takeaways from Tier 1–3 Verification
 
@@ -59,15 +59,15 @@ Target: **`50M–200M` deduplicated, language-verified tokens** stratified by no
 
 ### Phase A1 — Harvest & Re-Classify Local Corpora (Day 1, Zero Scraping)
 
-Audit of `/home/dndara/data/turkish/` shows substantial real noisy text already on disk, including several forum/comment files currently placed under `clean/`:
+Audit of `~/data/turkish/` shows substantial real noisy text already on disk, including several forum/comment files currently placed under `clean/`:
 
 1. **Primary noisy corpora already categorized**:
-   - `/home/dndara/data/turkish/noisy/kadinlar-klubu.txt` (`2.0 GB`) — rich informal verbs (`çalışmıom`, `buluşabilceğimiz`), elongations (`eveeet`), colloquialisms, emoticons.
-   - `/home/dndara/data/turkish/noisy/www.kizlarsoruyor.com.txt` (`620 MB`) — conversational Q&A, clitics, mixed diacritics.
-2. **Misclassified conversational/noisy files inside `/home/dndara/data/turkish/clean/`** (sampling confirmed noisy comments like `"versene bigisayarı"`, `"bence haksizlik var"`, `"hamdi abi naber nasılsın"`):
+   - `~/data/turkish/noisy/kadinlar-klubu.txt` (`2.0 GB`) — rich informal verbs (`çalışmıom`, `buluşabilceğimiz`), elongations (`eveeet`), colloquialisms, emoticons.
+   - `~/data/turkish/noisy/www.kizlarsoruyor.com.txt` (`620 MB`) — conversational Q&A, clitics, mixed diacritics.
+2. **Misclassified conversational/noisy files inside `~/data/turkish/clean/`** (sampling confirmed noisy comments like `"versene bigisayarı"`, `"bence haksizlik var"`, `"hamdi abi naber nasılsın"`):
    - `www.tvyorumlari.com.txt` (`6.4 MB`), `www.sikayetim.com.txt` (`7.3 MB`), `www.nurturia.com.tr.txt` (`57 MB`), `forum.shiftdelete.net.txt` (`183 MB`), `forum.memurlar.net.txt` (`205 MB`), `wowturkey.com.txt` (`1.4 GB`).
 3. **Existing OOV frequency telemetry**:
-   - `/home/dndara/data/turkish/unparsed_words.tsv` (`11,243,462` lines) already ranks the highest-impact OOV phenomena (`bi`: `1,784,584`, `cok`: `819,245`, `bişey`: `459,256`, `cnm`: `348,311`, `icin`: `197,278`, `hemde`: `178,390`, `degil`: `154,364`), enabling immediate data-driven prioritization of lexicon & morphotactic coverage.
+   - `~/data/turkish/unparsed_words.tsv` (`11,243,462` lines) already ranks the highest-impact OOV phenomena (`bi`: `1,784,584`, `cok`: `819,245`, `bişey`: `459,256`, `cnm`: `348,311`, `icin`: `197,278`, `hemde`: `178,390`, `degil`: `154,364`), enabling immediate data-driven prioritization of lexicon & morphotactic coverage.
 
 ### Phase A2 — Bridge the Modern Mobile & Domain Gap (Days 2–3)
 
@@ -76,7 +76,7 @@ Local forums skew toward ~2012 desktop web prose. Supplement them with open/publ
 1. **E-Commerce & Complaint Reviews**: Hugging Face `fthbrmnby/turkish_product_reviews` / `boun-tabilab/Turkish-Product-Reviews` (`235K+` Hepsiburada reviews) — captures modern mobile autocorrect/keyboard typos, brand/model proper nouns, prices, and numeric suffixes (`12 de`).
 2. **Ekşi Sözlük & Turkish Reddit**: Hugging Face `turkish-nlp-datasets/eksisozluk-*` + public Turkish subreddit archives (`r/turkey`, `r/KGBTR`) — captures deliberate all-lowercase writing, modern internet slang, and English loanword suffixation.
 3. **Public Turkish Tweets & Social Moderation Datasets**: `coltekin/offenseval2020_tr`, `BounTi`, `ctoraman/large-scale-hate-speech-turkish-v2`, `Overfit-GM/turkish-toxic-language` — short mobile utterances, heavy elongations, ASCII-only typing, and masked/slang tokens.
-4. **YouTube Comments & Spoken Subtitles**: Turkish subset of `PleIAs/YouTube-Commons` combined with `/home/dndara/data/turkish/clean/open-subtitles-tr-2018.txt` (`5.0 GB`).
+4. **YouTube Comments & Spoken Subtitles**: Turkish subset of `PleIAs/YouTube-Commons` combined with `~/data/turkish/clean/open-subtitles-tr-2018.txt` (`5.0 GB`).
 5. **Unfiltered Turkish Web Slices**: Medium-OOV slices from `CulturaX` / `FineWeb-2` before perplexity filtering discards informal user-comment sections.
 
 ### Phase A2.5 — Turkish Search Query Corpus & Short-Context Stress Data
@@ -91,7 +91,7 @@ Reserve a dedicated **`200–300` search-query evaluation slice** inside `Zember
 
 ### Phase A3 — Deterministic Zemberek Cleaning & Noise-Stratum Bucketing (Days 3–4)
 
-Run a deterministic preprocessing pass before feeding corpora into [`NoisyWordsLexiconGenerator`](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/NoisyWordsLexiconGenerator.java) or benchmark sampling:
+Run a deterministic preprocessing pass before feeding corpora into [`NoisyWordsLexiconGenerator`](normalization/src/main/java/zemberek/normalization/NoisyWordsLexiconGenerator.java) or benchmark sampling:
 
 1. **Language ID Gate**: Require Zemberek `LanguageIdentifier` (`tr` score > `0.85`) to prevent English, German, or Azerbaijani text from polluting random-walk contexts.
 2. **Deduplication & PII Scrubbing**: Exact line hash + MinHash near-dedup (removes spam/forum signatures); mask `@mentions`, URLs, emails, and phone numbers.
@@ -165,7 +165,7 @@ Evaluate every normalization PR across four complementary lenses:
 
 | Day | Deliverable | Concrete Output |
 | :---: | :--- | :--- |
-| **Day 1** | **Phase A1 + Tier 1/2 Pull** | Audit/bucket local `/home/dndara/data/turkish/` noisy+forum files; download `MultiLexNorm` (`tur`, `tur_deu`), `GECTurk/datasets/boun`, and `TRSPELL-10`. |
+| **Day 1** | **Phase A1 + Tier 1/2 Pull** | Audit/bucket local `~/data/turkish/` noisy+forum files; download `MultiLexNorm` (`tur`, `tur_deu`), `GECTurk/datasets/boun`, and `TRSPELL-10`. |
 | **Day 2** | **Phase A2 + A3 Pipeline** | Fetch HF reviews/Ekşi/social corpora; run Zemberek `LanguageIdentifier` + dedup + noise-density bucketing (`50M–200M` tokens). |
 | **Days 3–4** | **Stage C1–C2 Sampling** | Lock 1-page normalization spec; extract stratified `500 dev` + `1,200 test` candidates across 4 domains, 8 noise categories, Clean-Control, and minimal pairs. |
 | **Days 5–6** | **Stage C3 Adjudication** | Run multi-LLM consensus + `TurkishMorphology` gatekeeper + human adjudication on flagged spans & 10% audit. |

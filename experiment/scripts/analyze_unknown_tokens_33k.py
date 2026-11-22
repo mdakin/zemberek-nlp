@@ -167,7 +167,7 @@ def main():
     parser.add_argument(
         "file",
         nargs="?",
-        default="/home/dndara/work/zemberek-nlp/data/ambiguity/train_combined_33k.jsonl",
+        default="data/ambiguity/train_combined_33k.jsonl",
         help="Path to JSONL dataset to inspect (default: train_combined_33k.jsonl)",
     )
     args = parser.parse_args()

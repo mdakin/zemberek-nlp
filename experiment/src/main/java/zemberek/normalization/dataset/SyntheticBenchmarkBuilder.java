@@ -45,7 +45,7 @@ import zemberek.tokenization.TurkishTokenizer;
 /**
  * Reproducible, leak-free builder for three 1,000-sentence controlled Turkish normalization
  * benchmarks saved alongside existing test sets under
- * {@code /home/dndara/data/turkish/normalization/benchmarks/synthetic_1k/}:
+ * {@code ${ZEMBEREK_DATA_DIR:-~/data/turkish}/normalization/benchmarks/synthetic_1k/}:
  *
  * <ol>
  *   <li><b>{@code synth_asciified_1k}</b>: 1,000 verified clean multi-domain Turkish sentences
@@ -236,8 +236,8 @@ public final class SyntheticBenchmarkBuilder {
 
   public static void main(String[] args) throws Exception {
     long t0 = System.nanoTime();
-    Path baseNormDir = Paths.get("/home/dndara/data/turkish/normalization");
-    Path turkishRoot = Paths.get("/home/dndara/data/turkish");
+    Path baseNormDir = Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization");
+    Path turkishRoot = Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "");
     Path cleanDir = turkishRoot.resolve("clean");
     Path outDir = baseNormDir.resolve("benchmarks/synthetic_1k");
     for (int i = 0; i + 1 < args.length; i++) {

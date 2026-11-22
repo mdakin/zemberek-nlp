@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 """
 Download, extract, and organize publicly available Turkish normalization benchmarks,
 external lexicons, and split-safe source corpora under ~/data/turkish/normalization.
@@ -27,8 +28,8 @@ import requests
 
 csv.field_size_limit(sys.maxsize)
 
-BASE_DIR = Path("/home/dndara/data/turkish/normalization")
-TURKISH_DATA_DIR = Path("/home/dndara/data/turkish")
+BASE_DIR = Path(os.path.expanduser("~/data/turkish/normalization"))
+TURKISH_DATA_DIR = Path(os.path.expanduser("~/data/turkish"))
 
 BENCH_DIR = BASE_DIR / "benchmarks"
 LEX_DIR = BASE_DIR / "lexicons_external"

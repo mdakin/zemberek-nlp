@@ -1,4 +1,4 @@
-package zemberek.normalization.v2;
+package zemberek.normalization.v2.research;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;

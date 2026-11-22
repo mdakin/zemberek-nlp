@@ -25,7 +25,7 @@ import subprocess
 from collections import defaultdict
 from typing import Dict, List, Set, Tuple, Any
 
-REPO_ROOT = "/home/dndara/work/zemberek-nlp"
+REPO_ROOT = "."
 DATA_DIR = os.path.join(REPO_ROOT, "data/ambiguity")
 GOLDEN_DIR = os.path.join(DATA_DIR, "golden")
 BENCH_DIR = os.path.join(GOLDEN_DIR, "benchmark_results")
@@ -41,7 +41,7 @@ OUT_35K_TXT_WEIGHTS = os.path.join(DATA_DIR, "model-distilled-35k.txt")
 MODEL_33K_TH20K_BIN = os.path.join(DATA_DIR, "model-distilled-33k-th20k.bin")
 MODEL_41K_BIN = os.path.join(DATA_DIR, "model-distilled-41k.bin")
 
-MANIFEST_PATH = "/home/dndara/data/turkish/distilled/PERMANENT_HELDOUT_TEST_SET_MANIFEST.json"
+MANIFEST_PATH = os.path.expanduser("~/data/turkish/distilled/PERMANENT_HELDOUT_TEST_SET_MANIFEST.json")
 TEST_FILES = [
     os.path.join(DATA_DIR, "golden_test_1000_thinking500.jsonl"),
     os.path.join(DATA_DIR, "golden_test_2500_thinking500.jsonl"),

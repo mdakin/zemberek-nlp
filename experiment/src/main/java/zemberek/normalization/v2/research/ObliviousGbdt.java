@@ -1,4 +1,4 @@
-package zemberek.normalization.v2;
+package zemberek.normalization.v2.research;
 
 import java.util.Arrays;
 import java.util.stream.IntStream;

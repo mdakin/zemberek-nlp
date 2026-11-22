@@ -5,8 +5,8 @@
 * **Target Models**:
   1. **Morphological Disambiguator**: `model-distilled-30k.bin` (`6.16 MB` → `3.81 MB` zero-code / `1.38 MB` quantized)
   2. **Normalization `v2` Knowledge & Scorers (`PR #383`)**:
-     - [`knowledge.bin.gz`](file:///home/dndara/work/zemberek-nlp/normalization/src/main/resources/normalization/v2/knowledge.bin.gz) (`SNAPSHOT_VERSION = 5`): **`76.6 MB` raw (`v3`) / `30.71 MiB` `.gz` (`v4`) → `3.99 MiB` (`4.18 MB`) `.gz`** (**`-87.0%`**, `7.7x` smaller than `v4`, `18.3x` smaller than raw `v3`, `< 0.30 pp` `W-ERR` delta)
-     - [`perceptron.bin.gz`](file:///home/dndara/work/zemberek-nlp/normalization/src/main/resources/normalization/v2/perceptron.bin.gz) (`QuantizedWeightTable`): **`809,592` sparse features → `2.55 MiB` `.gz` / `2.62 MiB` RAM** (`~3.40 B/feature`)
+     - [`knowledge.bin.gz`](normalization/src/main/resources/normalization/v2/knowledge.bin.gz) (`SNAPSHOT_VERSION = 5`): **`76.6 MB` raw (`v3`) / `30.71 MiB` `.gz` (`v4`) → `3.99 MiB` (`4.18 MB`) `.gz`** (**`-87.0%`**, `7.7x` smaller than `v4`, `18.3x` smaller than raw `v3`, `< 0.30 pp` `W-ERR` delta)
+     - [`perceptron.bin.gz`](normalization/src/main/resources/normalization/v2/perceptron.bin.gz) (`QuantizedWeightTable`): **`809,592` sparse features → `2.55 MiB` `.gz` / `2.62 MiB` RAM** (`~3.40 B/feature`)
      - `lattice-deasciifier.bin` (`QuantizedWeightTable`): **`~2.9 MiB` RAM** (`MultiLevelMphf` + 16-bit fingerprints + `int8` codebook)
 * **Last Updated**: November 18, 2026
 
@@ -146,13 +146,13 @@ Beyond linguistic feature pruning, the binary representation in `LossyIntLookup`
 
 ## 6. How to Replicate or Apply
 
-A dedicated test script has been added to [`experiment/scripts/evaluate_compression_pruning.py`](file:///home/dndara/work/zemberek-nlp/experiment/scripts/evaluate_compression_pruning.py).
+A dedicated test script has been added to [`experiment/scripts/evaluate_compression_pruning.py`](experiment/scripts/evaluate_compression_pruning.py).
 
 To regenerate or test a pruned model:
 ```bash
 python3 experiment/scripts/evaluate_compression_pruning.py \
     --input data/ambiguity/model-distilled-30k.txt \
-    --test-set /home/dndara/data/turkish/distilled/golden_test_1000_canonical.jsonl \
+    --test-set ~/data/turkish/distilled/golden_test_1000_canonical.jsonl \
     --strip-prefix-2 \
     --threshold 0.5 \
     --output /tmp/model-distilled-30k-compact.bin
@@ -168,7 +168,7 @@ When bundling the data-driven `SpanLatticePerceptronNormalizer` (`zemberek.norma
 - **Raw `v3` snapshot (`OpenLongIntMap` + UTF tables)**: **`76.6 MB`** on disk (`~151 MB` in-memory Java heap).
 - **Initial gzipped `v4` snapshot**: **`30.71 MiB` (`32.20 MB`)**, of which **`27.4 MB` (`85.1%`)** was the 64-bit hashed 3-gram `CleanWordLm` (`392K` unigrams, `2.17M` bigrams, `1.83M` trigrams = `4.39M` entries), because storing explicit 8-byte pseudo-random `long` hashes defeated LZ77/GZIP dictionary compression.
 
-By replacing explicit 64-bit key storage with Zemberek's [`MultiLevelMphf`](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/hash/MultiLevelMphf.java) (`~3.17 bits/key`) across [`NormalizationKnowledge.java`](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/v2/NormalizationKnowledge.java) (`MphfCountMap`, `SNAPSHOT_VERSION = 5`), eliminating duplicated tables, front-coding sorted string keys, and tuning n-gram count cutoffs on `10,000` held-out sentences (`test_slice_01` + `nasty_5k`), we achieved:
+By replacing explicit 64-bit key storage with Zemberek's [`MultiLevelMphf`](core/src/main/java/zemberek/core/hash/MultiLevelMphf.java) (`~3.17 bits/key`) across [`NormalizationKnowledge.java`](normalization/src/main/java/zemberek/normalization/v2/NormalizationKnowledge.java) (`MphfCountMap`, `SNAPSHOT_VERSION = 5`), eliminating duplicated tables, front-coding sorted string keys, and tuning n-gram count cutoffs on `10,000` held-out sentences (`test_slice_01` + `nasty_5k`), we achieved:
 - **`knowledge.bin.gz` reduced from `30.71 MiB` (`32.20 MB`) → `3.99 MiB` (`4,184,088 B` / `4.18 MB`)** — an **`87.0%` gzipped reduction (`7.7x` smaller)** and **`91.3%` uncompressed reduction** (`76.6 MB` → `6.38 MiB` / `6,685,333 B`), while cutting in-memory `CleanWordLm` heap usage by **`~33x`** (`108.0 MB` → `3.27 MB`).
 - **Accuracy preserved within `< 0.30 pp` `W-ERR`**:
   - `test_slice_01` (`5,000` unseen heavy sentences): `80.76%` → **`80.47%` `W-ERR`** (`-0.29 pp`).
@@ -179,12 +179,12 @@ By replacing explicit 64-bit key storage with Zemberek's [`MultiLevelMphf`](file
 
 ## 8. How `MultiLevelMphf` Powers Both Sparse Weights and Hashed N-Gram LMs
 
-Zemberek's [`MultiLevelMphf`](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/hash/MultiLevelMphf.java) maps any static set of $N$ keys bijectively onto $\{0, \dots, N-1\}$ using a cascade of byte-seed displacement levels (`~3.16–3.18 bits/key` = **`0.40 bytes/key`**) with zero hash-table load-factor slack and zero explicit 64-bit key storage. Because an MPHF returns an arbitrary slot in $[0, N)$ for *unseen* query keys, a compact $b$-bit collision fingerprint ($b \in \{8, 12, 16\}$, false-positive rate $2^{-b}$) filters out OOV queries in $O(1)$.
+Zemberek's [`MultiLevelMphf`](core/src/main/java/zemberek/core/hash/MultiLevelMphf.java) maps any static set of $N$ keys bijectively onto $\{0, \dots, N-1\}$ using a cascade of byte-seed displacement levels (`~3.16–3.18 bits/key` = **`0.40 bytes/key`**) with zero hash-table load-factor slack and zero explicit 64-bit key storage. Because an MPHF returns an arbitrary slot in $[0, N)$ for *unseen* query keys, a compact $b$-bit collision fingerprint ($b \in \{8, 12, 16\}$, false-positive rate $2^{-b}$) filters out OOV queries in $O(1)$.
 
 Normalization `v2` uses two specialized `MultiLevelMphf` containers:
 
 ### 8.1 `QuantizedWeightTable` (`perceptron.bin.gz` & `lattice-deasciifier.bin`)
-Implemented in [`QuantizedWeightTable.java`](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/deasciifier/latticedeasciifier/QuantizedWeightTable.java) and loaded by [`SpanLatticePerceptronNormalizer.java`](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/v2/SpanLatticePerceptronNormalizer.java):
+Implemented in [`QuantizedWeightTable.java`](normalization/src/main/java/zemberek/normalization/deasciifier/latticedeasciifier/QuantizedWeightTable.java) and loaded by [`SpanLatticePerceptronNormalizer.java`](normalization/src/main/java/zemberek/normalization/v2/SpanLatticePerceptronNormalizer.java):
 - **Key**: 64-bit sparse feature hash `(templateId, contextHashes...)` split into `(int k0, int k1)`.
 - **Layout (`~3.40 B/feature` raw)**:
   1. `MultiLevelMphf`: `~0.40 B/feature` (`~3.17 bits/key`).
@@ -193,7 +193,7 @@ Implemented in [`QuantizedWeightTable.java`](file:///home/dndara/work/zemberek-n
 - **Footprint (`perceptron.bin.gz`)**: Packs **`809,592` active Perceptron features** (+ `20` dense `float` weights) into **`2,750,712 B` (`2.62 MiB`)** uncompressed and **`2,675,946 B` (`2.55 MiB`)** gzipped.
 
 ### 8.2 `MphfCountMap` (`CleanWordLm` inside `knowledge.bin.gz` `v5`)
-Implemented in [`NormalizationKnowledge.java`](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/v2/NormalizationKnowledge.java#L245-L330):
+Implemented in [`NormalizationKnowledge.java`](normalization/src/main/java/zemberek/normalization/v2/NormalizationKnowledge.java#L245-L330):
 - **Key**: 64-bit FNV-1a + Murmur3-mixed unigram/bigram/trigram hash (`k0 = (int) k`, `k1 = (int) (k >>> 32)`).
 - **Layout (`2.90 B/entry` raw, `2.46 B/entry` gzipped at `fpBits = 12`)**:
   1. `MultiLevelMphf`: **`0.40 B/entry`** (`3.16–3.17 bits/key`).
@@ -204,14 +204,14 @@ Implemented in [`NormalizationKnowledge.java`](file:///home/dndara/work/zemberek
 
 ## 9. Six Structural Optimizations in `NormalizationKnowledge` (`SNAPSHOT_VERSION = 5`)
 
-Beyond `MphfCountMap`, `v5` eliminated redundant tables and verbose Java `writeUTF`/`writeInt` framing in [`NormalizationKnowledge.java`](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/v2/NormalizationKnowledge.java):
+Beyond `MphfCountMap`, `v5` eliminated redundant tables and verbose Java `writeUTF`/`writeInt` framing in [`NormalizationKnowledge.java`](normalization/src/main/java/zemberek/normalization/v2/NormalizationKnowledge.java):
 
 1. **`CleanWordLm` `OpenLongIntMap` → `MphfCountMap` + Count Pruning (`u>=3, b>=4, t>=8`)**:
    - Replaced power-of-two open-addressing `(long[], int[])` hash tables (`12+ B/entry` serialized, `24+ B/entry` at `50%` load factor in RAM) with `12-bit` `MphfCountMap` (`2.90 B/entry` raw) and pruned noisy low-count tails (`unigram >= 3`, `bigram >= 4`, `trigram >= 8`), shrinking `CleanWordLm` from `4.39M` n-grams (`27.4 MB` `.gz`) to **`1,128,748` n-grams (`2.65 MiB` `.gz`)**.
 2. **Lossless Table Deduplication (`cleanOpenBigrams` & `cleanClosedWords` Removed)**:
    - Legacy `v3`/`v4` serialized two separate `Map<String, Integer>` tables (`cleanOpenBigrams` and `cleanClosedWords`, `~2.1 MB` `.gz`) whose counts were already present in `CleanWordLm.bigramCount(w1, w2)` and `CleanWordLm.unigramCount(w)`. Routing open/closed compound queries directly through `CleanWordLm` removed both tables with **zero information loss**.
 3. **Pure-Lowercase `casingLexicon` Deduplication (`370,786` → `100,873` Stored Entries)**:
-   - `72.8%` of `casingLexicon` entries had `title == 0 && upper == 0 && mixed == 0 && apostropheStem == 0`. Omitting pure-lowercase words from `casingLexicon` and synthesizing `lower = cleanLm.unigramCount(wordLower)` on demand via a flyweight `PURE_LOWER_CACHE[1..128]` ([`lookupCasing`](file:///home/dndara/work/zemberek-nlp/normalization/src/main/java/zemberek/normalization/v2/NormalizationKnowledge.java#L600-L615)) cut `casingLexicon` to **`457 KB` `.gz`** (`100%` lossless for every capitalized/mixed/apostrophe word).
+   - `72.8%` of `casingLexicon` entries had `title == 0 && upper == 0 && mixed == 0 && apostropheStem == 0`. Omitting pure-lowercase words from `casingLexicon` and synthesizing `lower = cleanLm.unigramCount(wordLower)` on demand via a flyweight `PURE_LOWER_CACHE[1..128]` ([`lookupCasing`](normalization/src/main/java/zemberek/normalization/v2/NormalizationKnowledge.java#L600-L615)) cut `casingLexicon` to **`457 KB` `.gz`** (`100%` lossless for every capitalized/mixed/apostrophe word).
 4. **Redundant `TargetCount.bestSurface` & Unused Metadata Stripped**:
    - Runtime candidate generation always calls `truecaseSingleWord(normLower, ...)`, never reading `TargetCount.bestSurface` or `SuffixRule.totalRawSuffixSeen`. Dropping `bestSurface` halved string volume in `parallel1ToN`, `parallel2To1`, and `parallel3To1`.
 5. **Lexicographic Front-Coding + VarInts + Bitflag-Packed `CasingCounts`**:

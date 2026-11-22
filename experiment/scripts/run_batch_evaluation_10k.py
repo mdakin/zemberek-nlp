@@ -22,14 +22,14 @@ SYSTEM_INSTRUCTION = (
 
 # Critical datasets that must NEVER be overwritten
 PROTECTED_FILES = [
-    os.path.realpath("/home/dndara/data/turkish/distilled/distilled_10k_annotated.jsonl"),
-    os.path.realpath("/home/dndara/data/turkish/distilled/distilled_20k_annotated.jsonl"),
-    os.path.realpath("/home/dndara/data/turkish/distilled/distilled_batch2_10k_annotated.jsonl"),
-    os.path.realpath("/home/dndara/data/turkish/distilled/distilled_batch3_10k_annotated.jsonl"),
-    os.path.realpath("/home/dndara/data/turkish/distilled/golden_test_1000_annotated.jsonl"),
-    os.path.realpath("/home/dndara/data/turkish/distilled/golden_test_1000_canonical.jsonl"),
-    os.path.realpath("/home/dndara/data/turkish/distilled/golden_test_2500_annotated.jsonl"),
-    os.path.realpath("/home/dndara/data/turkish/distilled/golden_test_2500_canonical.jsonl"),
+    os.path.realpath(os.path.expanduser("~/data/turkish/distilled/distilled_10k_annotated.jsonl")),
+    os.path.realpath(os.path.expanduser("~/data/turkish/distilled/distilled_20k_annotated.jsonl")),
+    os.path.realpath(os.path.expanduser("~/data/turkish/distilled/distilled_batch2_10k_annotated.jsonl")),
+    os.path.realpath(os.path.expanduser("~/data/turkish/distilled/distilled_batch3_10k_annotated.jsonl")),
+    os.path.realpath(os.path.expanduser("~/data/turkish/distilled/golden_test_1000_annotated.jsonl")),
+    os.path.realpath(os.path.expanduser("~/data/turkish/distilled/golden_test_1000_canonical.jsonl")),
+    os.path.realpath(os.path.expanduser("~/data/turkish/distilled/golden_test_2500_annotated.jsonl")),
+    os.path.realpath(os.path.expanduser("~/data/turkish/distilled/golden_test_2500_canonical.jsonl")),
     os.path.realpath("data/ambiguity/train_combined_30k.jsonl"),
     os.path.realpath("data/ambiguity/train_combined_33k.jsonl"),
 ]
@@ -182,7 +182,7 @@ def save_registry(registry_path: str, data: Dict[str, Any]):
 
 def main():
     parser = argparse.ArgumentParser(description="Gemini Batch API Disambiguation Evaluator")
-    parser.add_argument("--input", default="/home/dndara/data/turkish/distilled/distilled_10k_annotated.jsonl", help="Input JSONL")
+    parser.add_argument("--input", default=os.path.expanduser("~/data/turkish/distilled/distilled_10k_annotated.jsonl"), help="Input JSONL")
     parser.add_argument("--output", default="data/ambiguity/distilled_10k_thinking500_annotated.jsonl", help="Output annotated JSONL")
     parser.add_argument("--registry", default="data/ambiguity/batch_registry_10k_thinking500.json", help="Batch tracking registry")
     parser.add_argument("--summary", default="data/ambiguity/distilled_10k_thinking500_summary.json", help="Summary report")

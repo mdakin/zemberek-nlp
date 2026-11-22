@@ -13,8 +13,8 @@ import sys
 import json
 from collections import defaultdict, Counter
 
-DISTILLED_DIR = "/home/dndara/data/turkish/distilled"
-DATA_DIR = "/home/dndara/work/zemberek-nlp/data/ambiguity"
+DISTILLED_DIR = os.path.expanduser("~/data/turkish/distilled")
+DATA_DIR = "data/ambiguity"
 SRC_CANDIDATES = os.path.join(DISTILLED_DIR, "hard_uncertainty_candidates.jsonl")
 MANIFEST_PATH = os.path.join(DISTILLED_DIR, "PERMANENT_HELDOUT_TEST_SET_MANIFEST.json")
 

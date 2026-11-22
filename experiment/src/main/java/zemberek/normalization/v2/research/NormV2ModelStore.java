@@ -1,4 +1,4 @@
-package zemberek.normalization.v2;
+package zemberek.normalization.v2.research;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -22,17 +22,17 @@ import zemberek.morphology.TurkishMorphology;
 import zemberek.normalization.TurkishSentenceNormalizer;
 import zemberek.normalization.deasciifier.latticedeasciifier.QuantizedWeightTable;
 import zemberek.normalization.experiment.CompactStemEndingSpellChecker;
-import zemberek.normalization.v2.NormV2Types.AlignedSentence;
-import zemberek.normalization.v2.NormV2Types.PreparedLattice;
-import zemberek.normalization.v2.ParallelCorpusMiner.CasingCounts;
-import zemberek.normalization.v2.ParallelCorpusMiner.CharPhonotacticModel;
-import zemberek.normalization.v2.ParallelCorpusMiner.CleanCorpusKnowledge;
-import zemberek.normalization.v2.ParallelCorpusMiner.CleanWordLm;
-import zemberek.normalization.v2.ParallelCorpusMiner.MergeEntry;
-import zemberek.normalization.v2.ParallelCorpusMiner.MinedKnowledge;
-import zemberek.normalization.v2.ParallelCorpusMiner.RewriteEntry;
-import zemberek.normalization.v2.ParallelCorpusMiner.SuffixRule;
-import zemberek.normalization.v2.ParallelCorpusMiner.TargetCount;
+import zemberek.normalization.v2.research.NormV2Types.AlignedSentence;
+import zemberek.normalization.v2.research.NormV2Types.PreparedLattice;
+import zemberek.normalization.v2.research.ParallelCorpusMiner.CasingCounts;
+import zemberek.normalization.v2.research.ParallelCorpusMiner.CharPhonotacticModel;
+import zemberek.normalization.v2.research.ParallelCorpusMiner.CleanCorpusKnowledge;
+import zemberek.normalization.v2.research.ParallelCorpusMiner.CleanWordLm;
+import zemberek.normalization.v2.research.ParallelCorpusMiner.MergeEntry;
+import zemberek.normalization.v2.research.ParallelCorpusMiner.MinedKnowledge;
+import zemberek.normalization.v2.research.ParallelCorpusMiner.RewriteEntry;
+import zemberek.normalization.v2.research.ParallelCorpusMiner.SuffixRule;
+import zemberek.normalization.v2.research.ParallelCorpusMiner.TargetCount;
 
 /**
  * Fast binary snapshot loader and builder for the {@code v2.3} Turkish normalization models used by
@@ -49,42 +49,32 @@ public final class NormV2ModelStore {
   private static final int SNAPSHOT_VERSION = 3; // v2.4 (DENSE_DIM=20, RANK_DIM=46, 31 sparse templates)
 
   private static final Path HEAVY_SLICE_DIR =
-      Paths.get(
-          "/home/dndara/data/turkish/normalization/noisy_tr_v2/full_110k/general/llm_gold/normalized");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization/noisy_tr_v2/full_110k/general/llm_gold/normalized");
   private static final Path MEDIUM_SLICE_DIR =
-      Paths.get(
-          "/home/dndara/data/turkish/normalization/noisy_tr_v2/medium_110k/general/llm_gold/normalized");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization/noisy_tr_v2/medium_110k/general/llm_gold/normalized");
   private static final Path LOW_SLICE_DIR =
-      Paths.get(
-          "/home/dndara/data/turkish/normalization/noisy_tr_v2/low_110k/general/llm_gold/normalized");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization/noisy_tr_v2/low_110k/general/llm_gold/normalized");
   private static final String HELD_OUT_TEST_FILE = "test_slice_01_normalized.jsonl";
   private static final Path HELD_OUT_TEST_SLICE_02_V4 =
-      Paths.get(
-          "/home/dndara/data/turkish/normalization/noisy_tr_v2/full_110k/general/llm_gold_v4/normalized/test_slice_02_v4_hhigh_normalized.jsonl");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization/noisy_tr_v2/full_110k/general/llm_gold_v4/normalized/test_slice_02_v4_hhigh_normalized.jsonl");
 
   private static final Path NASTY_5K_TSV =
-      Paths.get(
-          "/home/dndara/data/turkish/normalization/custom_benchmark/nasty_5k/llm_gold/exports/nasty_5000_pairs.tsv");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization/custom_benchmark/nasty_5k/llm_gold/exports/nasty_5000_pairs.tsv");
   private static final Path MULTILEXNORM_TEST =
-      Paths.get("/home/dndara/data/turkish/normalization/benchmarks/multilexnorm/tur/test.norm");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization/benchmarks/multilexnorm/tur/test.norm");
   private static final Path BOUN_SOURCE_TEST =
-      Paths.get(
-          "/home/dndara/data/turkish/normalization/benchmarks/gecturk_boun_clitics/boun_source_test.txt");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization/benchmarks/gecturk_boun_clitics/boun_source_test.txt");
   private static final Path BOUN_TARGET_TEST =
-      Paths.get(
-          "/home/dndara/data/turkish/normalization/benchmarks/gecturk_boun_clitics/boun_target_test.txt");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization/benchmarks/gecturk_boun_clitics/boun_target_test.txt");
   private static final Path SYNTH_ASCII_TSV =
-      Paths.get(
-          "/home/dndara/data/turkish/normalization/benchmarks/synthetic_1k/synth_asciified_1k.tsv");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization/benchmarks/synthetic_1k/synth_asciified_1k.tsv");
   private static final Path SYNTH_TYPO_TSV =
-      Paths.get(
-          "/home/dndara/data/turkish/normalization/benchmarks/synthetic_1k/synth_typo_1k.tsv");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization/benchmarks/synthetic_1k/synth_typo_1k.tsv");
   private static final Path SYNTH_CLEAN_TSV =
-      Paths.get(
-          "/home/dndara/data/turkish/normalization/benchmarks/synthetic_1k/synth_clean_1k.tsv");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization/benchmarks/synthetic_1k/synth_clean_1k.tsv");
   private static final Path ZEMBEREK_NORM_ROOT =
-      Paths.get("/home/dndara/data/turkish/normalization/zemberek_norm_data");
-  private static final Path CLEAN_DIR = Paths.get("/home/dndara/data/turkish/clean");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization/zemberek_norm_data");
+  private static final Path CLEAN_DIR = Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/clean");
 
   private NormV2ModelStore() {}
 

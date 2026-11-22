@@ -17,7 +17,7 @@ import json
 import time
 import subprocess
 
-REPO_ROOT = "/home/dndara/work/zemberek-nlp"
+REPO_ROOT = "."
 DATA_DIR = os.path.join(REPO_ROOT, "data/ambiguity")
 SPECS_JSON = os.path.join(DATA_DIR, "sources/targeted_ambiguity_specs_253.json")
 

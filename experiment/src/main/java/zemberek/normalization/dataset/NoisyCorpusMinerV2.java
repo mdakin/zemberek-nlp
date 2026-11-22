@@ -57,9 +57,9 @@ import zemberek.normalization.dataset.DatasetModels.RawDocument;
 public final class NoisyCorpusMinerV2 {
 
   private static final Path DEFAULT_BASE_NORM_DIR =
-      Paths.get("/home/dndara/data/turkish/normalization");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization");
   private static final Path DEFAULT_TURKISH_DATA_ROOT =
-      Paths.get("/home/dndara/data/turkish");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "");
 
   private NoisyCorpusMinerV2() {}
 

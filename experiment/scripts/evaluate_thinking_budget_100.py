@@ -116,7 +116,7 @@ def main():
         print("ERROR: GEMINI_API_KEY or GOOGLE_API_KEY environment variable required.", file=sys.stderr)
         sys.exit(1)
 
-    input_file = "/home/dndara/data/turkish/distilled/distilled_10k_annotated.jsonl"
+    input_file = os.path.expanduser("~/data/turkish/distilled/distilled_10k_annotated.jsonl")
     out_jsonl = "data/ambiguity/eval_100_thinking_vs_nothinking.jsonl"
     out_summary = "data/ambiguity/eval_100_thinking_vs_nothinking_summary.json"
 

@@ -5,8 +5,8 @@
 | Parameter | Value |
 | :--- | :--- |
 | **Timestamp** | `2026-11-07T23:19:29.574177949Z` |
-| **Input Directory** | `/home/dndara/data/turkish/clean` (30 files) |
-| **Output Directory** | `/home/dndara/data/turkish/refined` |
+| **Input Directory** | `~/data/turkish/clean` (30 files) |
+| **Output Directory** | `~/data/turkish/refined` |
 | **Worker Threads** | `16` |
 | **Sentence Length Filter** | `[5, 30]` words (excluding punctuation) |
 | **Disambiguator Used** | `None` (pure `TurkishMorphology` token analysis) |

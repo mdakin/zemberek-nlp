@@ -10,7 +10,7 @@ import os
 import random
 from collections import defaultdict, Counter
 
-DISTILLED_DIR = "/home/dndara/data/turkish/distilled"
+DISTILLED_DIR = os.path.expanduser("~/data/turkish/distilled")
 SRC_CANDIDATES = os.path.join(DISTILLED_DIR, "hard_uncertainty_candidates.jsonl")
 
 # 1. Collect all forbidden sentence IDs and exact text lines
@@ -24,7 +24,7 @@ exclude_files = [
     os.path.join(DISTILLED_DIR, "test_100_annotated.jsonl"),
     os.path.join(DISTILLED_DIR, "random_natural_250_candidates.jsonl"),
     # Also check repo data files
-    "/home/dndara/work/zemberek-nlp/data/ambiguity/train_combined_v2.jsonl",
+    "data/ambiguity/train_combined_v2.jsonl",
 ]
 
 for fpath in exclude_files:

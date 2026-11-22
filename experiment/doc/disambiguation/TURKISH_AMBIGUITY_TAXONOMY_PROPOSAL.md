@@ -1,14 +1,14 @@
 # Turkish Morphological Ambiguity Taxonomy & Multi-Task Profiling Architecture (`ZAS-v3`)
 
-- **Reference Legacy Data**: `/home/dndara/data/turkish/zemberek_shared/` (`ambiguity_groups_empty_visible(1).txt`, `ambiguity_groups.txt`, `significant-bigrams.txt`, `unambiguous_bigrams.txt`, `unambiguous_trigrams.txt`, `no_parse.txt`, Dec 2012)
-- **Target Refined Corpus**: `/home/dndara/data/turkish/refined/` (`127,645,345` clean sentences, `1,277,763,410` parseable words, `819,786,514` ambiguous words)
-- **Document Location**: [`experiment/docs/model/TURKISH_AMBIGUITY_TAXONOMY_PROPOSAL.md`](file:///home/dndara/work/zemberek-nlp/experiment/docs/model/TURKISH_AMBIGUITY_TAXONOMY_PROPOSAL.md)
+- **Reference Legacy Data**: `~/data/turkish/zemberek_shared/` (`ambiguity_groups_empty_visible(1).txt`, `ambiguity_groups.txt`, `significant-bigrams.txt`, `unambiguous_bigrams.txt`, `unambiguous_trigrams.txt`, `no_parse.txt`, Dec 2012)
+- **Target Refined Corpus**: `~/data/turkish/refined/` (`127,645,345` clean sentences, `1,277,763,410` parseable words, `819,786,514` ambiguous words)
+- **Document Location**: [`experiment/docs/model/TURKISH_AMBIGUITY_TAXONOMY_PROPOSAL.md`](experiment/docs/model/TURKISH_AMBIGUITY_TAXONOMY_PROPOSAL.md)
 
 ---
 
 ## 1. Forensic Review of the 2012 `zemberek_shared` Files
 
-In `/home/dndara/data/turkish/zemberek_shared/`, your 2012 analysis over a `5.73M`-word corpus produced four interconnected artifacts:
+In `~/data/turkish/zemberek_shared/`, your 2012 analysis over a `5.73M`-word corpus produced four interconnected artifacts:
 1. **`ambiguity_groups_empty_visible(1).txt` & `ambiguity_groups.txt`**:
    - Grouped surface tokens by their candidate tag chains (`[(PrimaryPos,SecondaryPos;InflectionalMorphemes)(DerivedPos;DerivedMorphemes)]`), stripping out the lemma.
    - `ambiguity_groups_empty_visible(1).txt` made default/zero nominal morphemes explicit (`A3sg+Pnon+Nom` rather than empty `(Noun;)`), which was essential for distinguishing bare nouns from stems.
@@ -33,7 +33,7 @@ In `/home/dndara/data/turkish/zemberek_shared/`, your 2012 analysis over a `5.73
 3. **Conflation of Closed-Class Function Words with Open-Class Productive Paradigms**:
    - Group #1 (`3.92%`) is a single word (`bir`), Group #3 (`2.81%`) is 3 words (`bu`, `şu`, `o`), and Group #5 (`1.43%`) is 2 words (`de`, `da`), whereas Group #4 (`Acc` vs `P3sg+Nom`, `3.15%` combined) spans **40,000+ open-class nouns**.
 4. **Unused Native Zemberek Lexicon & Token Metadata**:
-   - Modern Zemberek exposes [`RootAttribute`](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/turkish/RootAttribute.java) (`Voicing`, `LastVowelDrop`, `Doubling`, `CompoundP3sg`, `CompoundP3sgRoot`, `InverseHarmony`, `Runtime`, `Ext`), [`SecondaryPos`](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/turkish/SecondaryPos.java) (including postposition case government `PCDat`, `PCAbl`, `PCIns`, `PCNom`, `PCGen`, plus `ProperNoun`, `Time`, `Demons`, `Pers`, `Quant`, `Ques`, `Card`, `Ord`), and [`Token.Type`](file:///home/dndara/work/zemberek-nlp/tokenization/src/main/java/zemberek/tokenization/Token.java).
+   - Modern Zemberek exposes [`RootAttribute`](core/src/main/java/zemberek/core/turkish/RootAttribute.java) (`Voicing`, `LastVowelDrop`, `Doubling`, `CompoundP3sg`, `CompoundP3sgRoot`, `InverseHarmony`, `Runtime`, `Ext`), [`SecondaryPos`](core/src/main/java/zemberek/core/turkish/SecondaryPos.java) (including postposition case government `PCDat`, `PCAbl`, `PCIns`, `PCNom`, `PCGen`, plus `ProperNoun`, `Time`, `Demons`, `Pers`, `Quant`, `Ques`, `Card`, `Ord`), and [`Token.Type`](tokenization/src/main/java/zemberek/tokenization/Token.java).
 5. **Surface Bigrams Instead of Consensus Morphosyntactic Context Frames**:
    - Surface word bigrams (`significant-bigrams.txt`) do not generalize across open-class nouns/verbs, and requiring neighbors to be 100% unambiguous (`K == 1`, `35.84%` of tokens) misses the additional **`~40%` of neighbor tokens that are partially unambiguous (Consensus-Anchored)**—i.e., tokens with $K \ge 2$ analyses where *all* candidates agree on their final POS or case suffix (e.g., every analysis of `aldığını` is a `Verb` participle ending in `+P3sg+Acc`, and every analysis of `Ankara'nın` ends in `+Gen`).
 
@@ -47,7 +47,7 @@ Random sentence selection from a corpus falls into a **Double Zipfian Trap**:
 2. **Intra-Signature Sense Skew (Majority-Sense Collapse)**: Even within a high-frequency open-class ambiguity like `Noun;A3sg+P3sg+Nom || Noun;A3sg+Pnon+Acc`, natural text is ~78% `P3sg+Nom` (possessive/compound head) and only ~22% `Acc` (bare direct object). Sampling by ambiguity frequency alone without **syntactic context stratification** causes the model to over-predict the majority tag whenever the context is nontrivial.
 
 ### 2.2 The Mathematical Link to `FastPerceptronAmbiguityResolver` (Feature Discriminability)
-A crucial insight emerges when we inspect the exact feature templates in [`FastPerceptronAmbiguityResolver.java`](file:///home/dndara/work/zemberek-nlp/morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java):
+A crucial insight emerges when we inspect the exact feature templates in [`FastPerceptronAmbiguityResolver.java`](morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java):
 
 | Feature Group in `FastPerceptronAmbiguityResolver` | Exact Template | Depends on `lemma`? | Depends on `rIg` (Full IG Chain)? | Depends on `lastGroup` (Final IG)? |
 | :--- | :--- | :---: | :---: | :---: |
@@ -164,7 +164,7 @@ Combining `(LeftConsensusAnchor, PositionRole, RightConsensusAnchor)` gives ever
 ## 4. Concrete Multi-Task Applications of `ZAS-v3`
 
 ### Application 1: Submodular / Stratified Training & Test Sentence Selection
-When selecting $N$ training sentences (e.g., $N = 50,000$ or $100,000$) from the `127.6M` refined sentences in `/home/dndara/data/turkish/refined`:
+When selecting $N$ training sentences (e.g., $N = 50,000$ or $100,000$) from the `127.6M` refined sentences in `~/data/turkish/refined`:
 - Instead of sampling sentences at random, we allocate sentence quotas across `MesoSignature`s using **Square-Root Smoothed Frequency ($\propto \sqrt{\text{count}}$)** so head patterns don't drown out medium-frequency patterns:
   - For **`OPEN_PARADIGM`** signatures (`uniqueLemmas > 50`, `M1`/`M2`/`M3`): stratify the quota across distinct **`(LeftConsensusAnchor, RightConsensusAnchor)` frames** (e.g., ensuring `Noun:Acc || Noun:P3sg` is sampled both when preceded by `Noun:Gen` + followed by `Verb:Finite`, and when preceded by `Det` + followed by `Verb:PastPart+P3sg+Acc`).
   - For **`CLOSED_LEXICAL`** and **`M4/M5/M6` Root-Collision** signatures (`uniqueLemmas <= 50` or `LEXICAL_ONLY_OBSERVABLE`): stratify the quota across **`(Lemma × ConsensusAnchorFrame)`** so every competing root (`yüz`, `yaş`, `koyun`, `belirterek`, `Ocak`, `kar/kâr`) gets balanced contextual exemplars.

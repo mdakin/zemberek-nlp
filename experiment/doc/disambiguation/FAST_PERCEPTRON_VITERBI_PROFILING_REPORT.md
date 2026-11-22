@@ -2,7 +2,7 @@
 
 **Target Model:** `model-distilled-33k.bin` (Compressed LossyIntLookup MPHF model)  
 **Decoding Mode:** Exact Viterbi (`decodeMode = VITERBI`, `beamSize = -1`, unpruned 2nd-order Markov Trellis)  
-**Evaluation Corpus:** 2,500 Canonical Distilled Sentences (`/home/dndara/data/turkish/distilled/golden_test_2500_canonical.jsonl`)  
+**Evaluation Corpus:** 2,500 Canonical Distilled Sentences (`~/data/turkish/distilled/golden_test_2500_canonical.jsonl`)  
 **Workload Profile:** 41,274 total tokens, 40,653 lexical tokens, 27,805 ambiguous tokens (67.37% ambiguity density), average 16.51 tokens/sentence  
 **Execution Scale:** 3 warmup passes + 15 measured iterations = 18 passes (742,932 tokens processed)  
 **Profiling Engine:** Java Flight Recorder (JFR) + OpenJDK 21 64-Bit Server VM  

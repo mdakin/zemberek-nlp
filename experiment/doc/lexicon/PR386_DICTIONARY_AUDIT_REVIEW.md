@@ -2,7 +2,7 @@
 
 ## 1. Overall Verdict: **Strong Direction, Needs Targeted Fixes Before Merge**
 
-[DICTIONARY_AUDIT_REPORT.md](file:///home/dndara/work/zemberek-nlp/experiment/doc/lexicon/DICTIONARY_AUDIT_REPORT.md) is well-reasoned and identifies real, long-standing structural bugs in Zemberek's dictionaries. In PR `#386` (`5bae363` + `62a6a40`, `+285` net lexicon items: `67,750 → 68,035`), **Track 1's structural fixes** — throwing `LexiconException` on duplicate `[A:...; A:...]` keys in [TurkishDictionaryLoader.java](file:///home/dndara/work/zemberek-nlp/morphology/src/main/java/zemberek/morphology/lexicon/tr/TurkishDictionaryLoader.java), fixing corrupted `CompoundP3sg` `Roots:` (`bacabaşı`, `güveyfeneri`, `tavuskuyruğu`, `düşkırıklığı`, `elbirliği`, etc.), removing false `CompoundP3sg` tags (`büyükşehir`, `ortaparmak`, `üstderi`), fixing multi-POS `NoVoicing` leaks (`paket`, `bayat`, `cennet`, `dehşet`, `somut`, `soyut`), and adding modern single-word vocabulary (`bebiş`, `tatlış`, `ghosting`, `fintek`, `özçekim`, `nörobilim`) — are genuinely valuable and directly fix errors like `"internet pakediniz" → "internet paketiniz"` and `"tatlısım" → "tatlışım"`.
+[DICTIONARY_AUDIT_REPORT.md](experiment/doc/lexicon/DICTIONARY_AUDIT_REPORT.md) is well-reasoned and identifies real, long-standing structural bugs in Zemberek's dictionaries. In PR `#386` (`5bae363` + `62a6a40`, `+285` net lexicon items: `67,750 → 68,035`), **Track 1's structural fixes** — throwing `LexiconException` on duplicate `[A:...; A:...]` keys in [TurkishDictionaryLoader.java](morphology/src/main/java/zemberek/morphology/lexicon/tr/TurkishDictionaryLoader.java), fixing corrupted `CompoundP3sg` `Roots:` (`bacabaşı`, `güveyfeneri`, `tavuskuyruğu`, `düşkırıklığı`, `elbirliği`, etc.), removing false `CompoundP3sg` tags (`büyükşehir`, `ortaparmak`, `üstderi`), fixing multi-POS `NoVoicing` leaks (`paket`, `bayat`, `cennet`, `dehşet`, `somut`, `soyut`), and adding modern single-word vocabulary (`bebiş`, `tatlış`, `ghosting`, `fintek`, `özçekim`, `nörobilim`) — are genuinely valuable and directly fix errors like `"internet pakediniz" → "internet paketiniz"` and `"tatlısım" → "tatlışım"`.
 
 However, live morphological probing and evaluation on `test_slice_02_v4` uncovered **7 concrete bugs** (including two subtle serializer/loader bugs triggered by the new entries and two linguistic/TDK regressions) that should be fixed before merging PR `#386`.
 
@@ -23,7 +23,7 @@ However, live morphological probing and evaluation on `test_slice_02_v4` uncover
 - **Fix:** Revert `bol [P:Adj]` back to `bol [P:Adj]` (no `InverseHarmony`), and add `"bol"` to `intentionalExceptions` in `TurkishDictionaryLoaderTest.defaultDictionariesMultiPosPhoneticConsistencyTest` alongside `"kalp"`, `"nefis"`, and `"kadir"`.
 
 ### 2.2 `DictionarySerializer` Locale Asymmetry Corrupts `API`, `GIF`, `HIV`, `PIN`, `SIM`, `BIST` in `lexicon.bin`
-- **Where:** [DictionarySerializer.java](file:///home/dndara/work/zemberek-nlp/morphology/src/main/java/zemberek/morphology/lexicon/DictionarySerializer.java#L141-L176) interacting with PR `#386`'s new uppercase ASCII-`I` acronyms (`API [Pr:api]`, `GIF [Pr:gif]`, `HIV [Pr:hiv]`, `PIN [Pr:pin]`, `SIM [Pr:sim]`, `BIST [Pr:bist]`).
+- **Where:** [DictionarySerializer.java](morphology/src/main/java/zemberek/morphology/lexicon/DictionarySerializer.java#L141-L176) interacting with PR `#386`'s new uppercase ASCII-`I` acronyms (`API [Pr:api]`, `GIF [Pr:gif]`, `HIV [Pr:hiv]`, `PIN [Pr:pin]`, `SIM [Pr:sim]`, `BIST [Pr:bist]`).
 - **Root Cause:**
   1. During `lexicon.bin` generation, `convertToProto()` (`L141`) calls `item.lemma.toLowerCase()` **without a `Locale`** (default `en_US`: `"API".toLowerCase()` = `"api"`). Because `item.pronunciation` (`"api"`) equals `lowercaseLemma` (`"api"`), `convertToProto()` **omits `pronunciation`** from the protobuf!
   2. At runtime, `convertToDictionaryItem()` (`L171–176`) calls `item.getLemma().toLowerCase(Turkish.LOCALE)` (`"API"` → **`"apı"`** with dotless `ı`!) and fills the empty `pronunciation` with **`"apı"`**, **`"gıf"`**, **`"hıv"`**, **`"pın"`**, **`"sım"`**, **`"bıst"`**!
@@ -32,7 +32,7 @@ However, live morphological probing and evaluation on `test_slice_02_v4` uncover
   - `morphPr.analyze("API'ye")` → **`[NO LEXICAL PARSE]`**, while `*API'ya` parses as `[API:Noun,Abbrv] apı:Noun+A3sg+ya:Dat`!
   - On `test_slice_02_v4` (`gen_dv_003585`), `"api entegresi"` normalized to `"API entegresi"` in Baseline, but regressed to lowercase `"api entegresi"` in PR `#386`.
 - **Fix (2 parts):**
-  1. In [DictionarySerializer.java](file:///home/dndara/work/zemberek-nlp/morphology/src/main/java/zemberek/morphology/lexicon/DictionarySerializer.java#L141), change `String lowercaseLemma = item.lemma.toLowerCase();` to use the exact same locale as `convertToDictionaryItem`:
+  1. In [DictionarySerializer.java](morphology/src/main/java/zemberek/morphology/lexicon/DictionarySerializer.java#L141), change `String lowercaseLemma = item.lemma.toLowerCase();` to use the exact same locale as `convertToDictionaryItem`:
      ```java
      Locale locale = item.attributes.contains(RootAttribute.LocaleEn) ? Locale.ENGLISH : Turkish.LOCALE;
      String lowercaseLemma = item.lemma.toLowerCase(locale);
@@ -40,7 +40,7 @@ However, live morphological probing and evaluation on `test_slice_02_v4` uncover
   2. Add `A:LocaleEn` to foreign ASCII-`I` acronyms in `abbreviations.dict` (`AI`, `API`, `BIOS`, `BIST`, `FBI`, `GIF`, `HIV`, `HTTPS`, `IBAN`, `IPO`, `IoT`, `KPI`, `PIN`, `ROI`, `SIM`, `SWIFT`, `UI`, `UN`, `WIFI`) so lowercase `"api"`, `"wifi"`, `"iban"`, `"gif"`, `"pin"`, `"sim"` match their stems cleanly.
 
 ### 2.3 `TurkishDictionaryLoader` `"-og"` Voicing Leak Breaks `TOGG [Pr:tog; P:Abbrv]` and `vlog [A:Ext]`
-- **Where:** [TurkishDictionaryLoader.java](file:///home/dndara/work/zemberek-nlp/morphology/src/main/java/zemberek/morphology/lexicon/tr/TurkishDictionaryLoader.java#L524-L528).
+- **Where:** [TurkishDictionaryLoader.java](morphology/src/main/java/zemberek/morphology/lexicon/tr/TurkishDictionaryLoader.java#L524-L528).
 - **Root Cause:** On `L518–519`, stop-consonant `Voicing` exempts both `ProperNoun` and `Abbreviation`, **but on `L524–527` (`if (word.endsWith("nk") || word.endsWith("og"))`), `posData.secondaryPos != SecondaryPos.Abbreviation` was omitted!**
   - Because `TOGG [Pr:tog; P:Abbrv]` has pronunciation `"tog"` (ending in `"og"`), `TurkishDictionaryLoader` silently attaches `RootAttribute.Voicing`, mutating its prevocalic stem to `"toğ"`!
   - Consequently, **`morphPr.analyze("TOGG'un")`**, **`"TOGG'u"`**, and **`"TOGG'a"`** all return **`[NO LEXICAL PARSE]`**!

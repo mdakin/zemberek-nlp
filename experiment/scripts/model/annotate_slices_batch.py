@@ -169,7 +169,7 @@ def ensure_candidates_jsonl(
         print(f"  [STAGE 1] Found ZCS-v2 candidates JSONL: {candidates_jsonl_path}")
         return
 
-    default_cand_path = Path("/home/dndara/data/turkish/annotated_slices") / pool / "candidates" / candidates_jsonl_path.name
+    default_cand_path = Path(os.path.expanduser("~/data/turkish/annotated_slices")) / pool / "candidates" / candidates_jsonl_path.name
     if default_cand_path.exists() and default_cand_path.stat().st_size > 0:
         candidates_jsonl_path.parent.mkdir(parents=True, exist_ok=True)
         if candidates_jsonl_path.is_symlink() or candidates_jsonl_path.exists():
@@ -507,7 +507,7 @@ def process_single_slice(
         sample_prompt = format_zemberek_only_prompt(records[0]) if records else ""
         avg_user_chars = sum(len(format_zemberek_only_prompt(r)) for r in records) / max(1, len(records))
         sys_chars = len(SYSTEM_INSTRUCTION)
-        # Calibrated from empirical gemini-3.8-flash and gemini-4-argon usageMetadata on GSLA-v2.3
+        # Calibrated from empirical gemini-3.8-flash and gemini-2.5-flash usageMetadata on GSLA-v2.3
         avg_user_tokens = avg_user_chars / 1.30
         sys_tokens = sys_chars / 2.25
         est_prompt_tokens = int((avg_user_tokens + sys_tokens) * total_sentences)
@@ -528,13 +528,13 @@ def process_single_slice(
         # Empirical model cost profiles (Batch API 50% discount rates):
         # 1. gemini-3.8-flash LOW (0 thought tokens + ~51 JSON out/sent)
         # 2. gemini-3.8-flash MEDIUM (~738 thought tokens + ~51 JSON = ~790 out/sent)
-        # 3. gemini-4-argon LOW / MEDIUM (0 thought tokens + ~41 JSON out/sent)
-        # 4. gemini-4-argon HIGH (~820 avg thought tokens + ~41 JSON = ~861 out/sent)
+        # 3. gemini-2.5-flash LOW / MEDIUM (0 thought tokens + ~41 JSON out/sent)
+        # 4. gemini-2.5-flash HIGH (~820 avg thought tokens + ~41 JSON = ~861 out/sent)
         models_table = [
             ("gemini-3.8-flash LOW (0 thought, ~51 out/s)", 51, 0.075, 0.30, 0.25, 1.50),
             ("gemini-3.8-flash MEDIUM (~738 thought, ~790 out/s)", 790, 0.075, 0.30, 0.25, 1.50),
-            ("gemini-4-argon LOW/MEDIUM (0 thought, ~41 out/s)", 41, 0.625, 5.00, 1.00, 6.00),
-            ("gemini-4-argon HIGH (~820 thought, ~861 out/s)", 861, 0.625, 5.00, 1.00, 6.00),
+            ("gemini-2.5-flash LOW/MEDIUM (0 thought, ~41 out/s)", 41, 0.625, 5.00, 1.00, 6.00),
+            ("gemini-2.5-flash HIGH (~820 thought, ~861 out/s)", 861, 0.625, 5.00, 1.00, 6.00),
         ]
         print("\n    Estimated Batch API Cost (50% Discount Included):")
         for m_label, out_per_sent, in_low, out_low, in_high, out_high in models_table:
@@ -846,8 +846,8 @@ def main() -> None:
     load_env(".env.local")
 
     repo_root = Path(__file__).resolve().parent.parent.parent.parent
-    default_slices_dir = Path("/home/dndara/data/turkish/selected_slices")
-    default_output_dir = Path("/home/dndara/data/turkish/annotated_slices")
+    default_slices_dir = Path(os.path.expanduser("~/data/turkish/selected_slices"))
+    default_output_dir = Path(os.path.expanduser("~/data/turkish/annotated_slices"))
 
     parser = argparse.ArgumentParser(
         description="GSLA-v2.1: Zemberek-Only Golden Set Slice Annotator via Gemini Batch API"
@@ -873,8 +873,8 @@ def main() -> None:
         help=f"Output root directory for candidates, registries, and annotated JSONLs (default: {default_output_dir})"
     )
     parser.add_argument(
-        "--model", default="gemini-4-argon",
-        help="Gemini model identifier for Batch API (default: gemini-4-argon)"
+        "--model", default="gemini-2.5-flash",
+        help="Gemini model identifier for Batch API (default: gemini-2.5-flash)"
     )
     parser.add_argument(
         "--reasoning", choices=["low", "medium", "high"], default="medium",

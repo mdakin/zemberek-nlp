@@ -1,4 +1,4 @@
-package zemberek.normalization.v2;
+package zemberek.normalization.v2.research;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -24,14 +24,14 @@ import zemberek.lm.compression.SmoothLm;
 import zemberek.morphology.TurkishMorphology;
 import zemberek.normalization.TurkishSentenceNormalizer;
 import zemberek.normalization.experiment.CompactStemEndingSpellChecker;
-import zemberek.normalization.v2.NormV2Types.AlignedSentence;
-import zemberek.normalization.v2.NormV2Types.PreparedLattice;
-import zemberek.normalization.v2.NormV2Types.SentenceLattice;
-import zemberek.normalization.v2.NormV2Types.SpanArc;
-import zemberek.normalization.v2.NormV2Types.SpanToken;
-import zemberek.normalization.v2.NormV2Types.TextNormalizer;
-import zemberek.normalization.v2.ParallelCorpusMiner.CleanCorpusKnowledge;
-import zemberek.normalization.v2.ParallelCorpusMiner.MinedKnowledge;
+import zemberek.normalization.v2.research.NormV2Types.AlignedSentence;
+import zemberek.normalization.v2.research.NormV2Types.PreparedLattice;
+import zemberek.normalization.v2.research.NormV2Types.SentenceLattice;
+import zemberek.normalization.v2.research.NormV2Types.SpanArc;
+import zemberek.normalization.v2.research.NormV2Types.SpanToken;
+import zemberek.normalization.v2.research.NormV2Types.TextNormalizer;
+import zemberek.normalization.v2.research.ParallelCorpusMiner.CleanCorpusKnowledge;
+import zemberek.normalization.v2.research.ParallelCorpusMiner.MinedKnowledge;
 import zemberek.tokenization.Token;
 import zemberek.tokenization.TurkishTokenizer;
 
@@ -151,43 +151,34 @@ public final class NormalizationV2BenchmarkRunner {
       double parallel8TSpeedup) {}
 
   private static final Path HEAVY_SLICE_DIR =
-      Paths.get(
-          "/home/dndara/data/turkish/normalization/noisy_tr_v2/full_110k/general/llm_gold/normalized");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization/noisy_tr_v2/full_110k/general/llm_gold/normalized");
   private static final Path MEDIUM_SLICE_DIR =
-      Paths.get(
-          "/home/dndara/data/turkish/normalization/noisy_tr_v2/medium_110k/general/llm_gold/normalized");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization/noisy_tr_v2/medium_110k/general/llm_gold/normalized");
   private static final Path LOW_SLICE_DIR =
-      Paths.get(
-          "/home/dndara/data/turkish/normalization/noisy_tr_v2/low_110k/general/llm_gold/normalized");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization/noisy_tr_v2/low_110k/general/llm_gold/normalized");
   private static final String PRIMARY_TEST_SLICE_FILE = "test_slice_01_normalized.jsonl";
   private static final String FALLBACK_HELD_OUT_SLICE_FILE = "train_slice_04_normalized.jsonl";
 
   private static final Path NASTY_5K_TSV =
-      Paths.get(
-          "/home/dndara/data/turkish/normalization/custom_benchmark/nasty_5k/llm_gold/exports/nasty_5000_pairs.tsv");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization/custom_benchmark/nasty_5k/llm_gold/exports/nasty_5000_pairs.tsv");
   private static final Path MULTILEXNORM_TEST =
-      Paths.get("/home/dndara/data/turkish/normalization/benchmarks/multilexnorm/tur/test.norm");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization/benchmarks/multilexnorm/tur/test.norm");
   private static final Path BOUN_SOURCE_TEST =
-      Paths.get(
-          "/home/dndara/data/turkish/normalization/benchmarks/gecturk_boun_clitics/boun_source_test.txt");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization/benchmarks/gecturk_boun_clitics/boun_source_test.txt");
   private static final Path BOUN_TARGET_TEST =
-      Paths.get(
-          "/home/dndara/data/turkish/normalization/benchmarks/gecturk_boun_clitics/boun_target_test.txt");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization/benchmarks/gecturk_boun_clitics/boun_target_test.txt");
   private static final Path SYNTH_ASCII_TSV =
-      Paths.get(
-          "/home/dndara/data/turkish/normalization/benchmarks/synthetic_1k/synth_asciified_1k.tsv");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization/benchmarks/synthetic_1k/synth_asciified_1k.tsv");
   private static final Path SYNTH_TYPO_TSV =
-      Paths.get(
-          "/home/dndara/data/turkish/normalization/benchmarks/synthetic_1k/synth_typo_1k.tsv");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization/benchmarks/synthetic_1k/synth_typo_1k.tsv");
   private static final Path SYNTH_CLEAN_TSV =
-      Paths.get(
-          "/home/dndara/data/turkish/normalization/benchmarks/synthetic_1k/synth_clean_1k.tsv");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization/benchmarks/synthetic_1k/synth_clean_1k.tsv");
   private static final Path ZEMBEREK_NORM_ROOT =
-      Paths.get("/home/dndara/data/turkish/normalization/zemberek_norm_data");
-  private static final Path CLEAN_DIR = Paths.get("/home/dndara/data/turkish/clean");
+      Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/normalization/zemberek_norm_data");
+  private static final Path CLEAN_DIR = Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/clean");
 
   public static void main(String[] args) throws Exception {
-    Path outDir = Paths.get("/home/dndara/work/zemberek-nlp/experiment/target/norm_v2_results");
+    Path outDir = Paths.get("experiment/target/norm_v2_results");
     boolean skipSweeps = false;
     boolean heavyOnly = false;
     for (String arg : args) {

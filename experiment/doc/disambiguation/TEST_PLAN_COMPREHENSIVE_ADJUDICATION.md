@@ -128,15 +128,15 @@ All interactions with the LLM are logged with complete fidelity to ensure full r
 ## 6. Execution Pipeline & Tooling
 
 1. **Pairwise Dataset Preparation**:
-   [`experiment/scripts/adjudicate/prepare_pairwise_dataset.py`](file:///home/dndara/work/zemberek-nlp/experiment/scripts/adjudicate/prepare_pairwise_dataset.py)
+   [`experiment/scripts/adjudicate/prepare_pairwise_dataset.py`](experiment/scripts/adjudicate/prepare_pairwise_dataset.py)
    - Operates directly on pristine CoNLL-U gold trees and native model exports (0 synthetic bias).
    - Generates double-blind pairs with 50/50 randomized candidate ordering.
 2. **Gemini Batch Adjudicator**:
-   [`experiment/scripts/adjudicate/run_adjudication.py`](file:///home/dndara/work/zemberek-nlp/experiment/scripts/adjudicate/run_adjudication.py)
+   [`experiment/scripts/adjudicate/run_adjudication.py`](experiment/scripts/adjudicate/run_adjudication.py)
    - Gemini 3.8 Flash via Batch API (`thinkingBudget: 1024`, `temperature: 0.0`).
    - Supports `--limit-per-treebank`, chunking, automated polling, and idempotent resume.
 3. **Double-Blind Evaluation**:
-   [`experiment/scripts/adjudicate/evaluate_adjudication.py`](file:///home/dndara/work/zemberek-nlp/experiment/scripts/adjudicate/evaluate_adjudication.py)
+   [`experiment/scripts/adjudicate/evaluate_adjudication.py`](experiment/scripts/adjudicate/evaluate_adjudication.py)
    - Evaluates disputed tokens, control calibration, and true adjudicated accuracy.
 
 ---

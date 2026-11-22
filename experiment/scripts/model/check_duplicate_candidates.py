@@ -11,7 +11,7 @@ from collections import Counter, defaultdict
 
 def main():
     slice_files = sorted(
-        glob.glob("/home/dndara/data/turkish/annotated_slices/*/candidates/*.jsonl")
+        glob.glob(os.path.expanduser("~/data/turkish/annotated_slices/*/candidates/*.jsonl"))
     )
     print(f"Scanning {len(slice_files)} candidate slice files...\n")
 
@@ -82,7 +82,7 @@ def main():
 
     print("\n=== DETAILED EXAMPLES FROM test_slice_001 (First 100 Sentences) ===")
     with open(
-        "/home/dndara/data/turkish/annotated_slices/test/candidates/test_slice_001_candidates.jsonl",
+        os.path.expanduser("~/data/turkish/annotated_slices/test/candidates/test_slice_001_candidates.jsonl"),
         encoding="utf-8",
     ) as fp:
         for idx, line in enumerate(fp):

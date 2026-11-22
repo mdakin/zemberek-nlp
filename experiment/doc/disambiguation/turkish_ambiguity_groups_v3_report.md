@@ -5,7 +5,7 @@
 | Metric | Value |
 | :--- | :--- |
 | **Timestamp** | `2026-11-08T00:21:17.783619278Z` |
-| **Refined Corpus Directory** | `/home/dndara/data/turkish/refined` (30 files) |
+| **Refined Corpus Directory** | `~/data/turkish/refined` (30 files) |
 | **Max Sentences / File** | `50,000` |
 | **Sentences Profiled** | **1,440,573** (78399 sents/sec) |
 | **Total Words Profiled (Non-Punctuation)** | **17,059,288** (928397 words/sec) |

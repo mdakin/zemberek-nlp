@@ -25,8 +25,8 @@ import json
 import argparse
 from typing import Set, Dict, Any, List, Tuple
 
-REPO_ROOT = "/home/dndara/work/zemberek-nlp"
-DISTILLED_DIR = "/home/dndara/data/turkish/distilled"
+REPO_ROOT = "."
+DISTILLED_DIR = os.path.expanduser("~/data/turkish/distilled")
 DATA_DIR = os.path.join(REPO_ROOT, "data/ambiguity")
 
 DEFAULT_BASE = os.path.join(DATA_DIR, "train_combined_33k_th20k.jsonl")

@@ -6,7 +6,7 @@ Zemberek FastPerceptron ambiguity models.
 Usage:
   python3 experiment/scripts/evaluate_compression_pruning.py \
       --input data/ambiguity/model-distilled-30k.txt \
-      --test-set /home/dndara/data/turkish/distilled/golden_test_1000_canonical.jsonl \
+      --test-set ~/data/turkish/distilled/golden_test_1000_canonical.jsonl \
       --strip-prefix-2 \
       --threshold 0.5 \
       --output /tmp/model-compact.bin
@@ -116,7 +116,7 @@ def evaluate_model(model_bin: str, test_set: str, cp: str) -> dict:
 def main():
     parser = argparse.ArgumentParser(description="Evaluate FastPerceptron model compression and pruning options.")
     parser.add_argument("--input", "-i", default="data/ambiguity/model-distilled-30k.txt", help="Input uncompressed weights text file")
-    parser.add_argument("--test-set", "-t", default="/home/dndara/data/turkish/distilled/golden_test_1000_canonical.jsonl", help="Test dataset (JSONL)")
+    parser.add_argument("--test-set", "-t", default=os.path.expanduser("~/data/turkish/distilled/golden_test_1000_canonical.jsonl"), help="Test dataset (JSONL)")
     parser.add_argument("--threshold", "-th", type=float, default=0.5, help="Absolute weight threshold for pruning (|w| > th)")
     parser.add_argument("--strip-prefix-2", action="store_true", help="Omit skip-bigram feature template 2:r1-ig1-r3-ig3")
     parser.add_argument("--output", "-o", default="/tmp/model-compact.bin", help="Output .bin model path")

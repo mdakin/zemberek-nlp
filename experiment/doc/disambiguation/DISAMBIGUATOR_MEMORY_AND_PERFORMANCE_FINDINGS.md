@@ -2,13 +2,13 @@
 
 ## 1. Executive Summary
 
-On the 100,000-paragraph benchmark (`/home/dndara/data/turkish/clean/cnn-turk.txt`, `211,232` sentences, `3,686,140` tokens, `364,234` unique `SingleAnalysis` instances), [`FastPerceptronAmbiguityResolver`](file:///home/dndara/work/zemberek-nlp/morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java) exhibits two distinct issues:
+On the 100,000-paragraph benchmark (`~/data/turkish/clean/cnn-turk.txt`, `211,232` sentences, `3,686,140` tokens, `364,234` unique `SingleAnalysis` instances), [`FastPerceptronAmbiguityResolver`](morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java) exhibits two distinct issues:
 
 1. **Excessive Heap Footprint (~350–408 MB retained by the disambiguator alone)**:
-   - By comparison, [`TurkishMorphology`](file:///home/dndara/work/zemberek-nlp/morphology/src/main/java/zemberek/morphology/TurkishMorphology.java)'s entire 50,000-word `DynamicCache` of `WordAnalysis` results uses only **`14.3 MB`** of heap (`~290 bytes/word`).
-   - In contrast, [`FastPerceptronAmbiguityResolver`](file:///home/dndara/work/zemberek-nlp/morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java) allocates **`48 MB` immediately at startup** for transition tables, plus **`~2.0 KB` of heap per cached `SingleAnalysis`** (`~250–300 MB` for `131K–150K` cached analyses).
+   - By comparison, [`TurkishMorphology`](morphology/src/main/java/zemberek/morphology/TurkishMorphology.java)'s entire 50,000-word `DynamicCache` of `WordAnalysis` results uses only **`14.3 MB`** of heap (`~290 bytes/word`).
+   - In contrast, [`FastPerceptronAmbiguityResolver`](morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java) allocates **`48 MB` immediately at startup** for transition tables, plus **`~2.0 KB` of heap per cached `SingleAnalysis`** (`~250–300 MB` for `131K–150K` cached analyses).
 2. **Cache Saturation & Transition-Key Drift on Large Corpora**:
-   - Once the number of unique analyses in a corpus exceeds `MAX_MAP_ENTRIES`, the original [`AnalysisTemplate.assignId`](file:///home/dndara/work/zemberek-nlp/morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java#L161-L172) called `counter.getAndIncrement()` without storing the result, assigning a different `rIgId` and `biStateId` every time an uncached analysis was seen and invalidating the bigram/trigram transition caches (`biKeys`, `f2Keys`).
+   - Once the number of unique analyses in a corpus exceeds `MAX_MAP_ENTRIES`, the original [`AnalysisTemplate.assignId`](morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java#L161-L172) called `counter.getAndIncrement()` without storing the result, assigning a different `rIgId` and `biStateId` every time an uncached analysis was seen and invalidating the bigram/trigram transition caches (`biKeys`, `f2Keys`).
 
 ---
 
@@ -26,7 +26,7 @@ Using forced-GC heap snapshots (`MeasureMemoryBreakdown`) across initialization,
 
 ### Why Does Each Cached `SingleAnalysis` Cost `~2.0 KB` of Heap?
 
-Inspecting [`AnalysisTemplate`](file:///home/dndara/work/zemberek-nlp/morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java#L140-L327), [`ScoredCandidate`](file:///home/dndara/work/zemberek-nlp/morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java#L598-L649), and [`CandidateContext`](file:///home/dndara/work/zemberek-nlp/morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java#L473-L581) reveals four sources of memory amplification:
+Inspecting [`AnalysisTemplate`](morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java#L140-L327), [`ScoredCandidate`](morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java#L598-L649), and [`CandidateContext`](morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java#L473-L581) reveals four sources of memory amplification:
 
 ```mermaid
 flowchart TD
@@ -37,14 +37,14 @@ flowchart TD
 ```
 
 1. **10+ Unigram `String` Fields Retained Forever on `AnalysisTemplate` (~105 MB)**:
-   - In [`AnalysisTemplate`](file:///home/dndara/work/zemberek-nlp/morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java#L201-L209), the fields `f4Key`, `f10Key`, `f10bKey`, `f10cKey`, `f20Keys[]`, `f22Key`, `initProperKey`, and `properLemmaKey` are **unigram feature keys**.
-   - They are used **only once** inside the [`ScoredCandidate` constructor](file:///home/dndara/work/zemberek-nlp/morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java#L608-L634) to look up 4 floats (`uniScoreInitial`, `uniScoreNonInitial`, `c10bScore`, `c10cScore`).
+   - In [`AnalysisTemplate`](morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java#L201-L209), the fields `f4Key`, `f10Key`, `f10bKey`, `f10cKey`, `f20Keys[]`, `f22Key`, `initProperKey`, and `properLemmaKey` are **unigram feature keys**.
+   - They are used **only once** inside the [`ScoredCandidate` constructor](morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java#L608-L634) to look up 4 floats (`uniScoreInitial`, `uniScoreNonInitial`, `c10bScore`, `c10cScore`).
    - Once those 4 floats (16 bytes) are computed, those 8–12 `String` objects and the `f20Keys` array (`~600–700 bytes` per `AnalysisTemplate`) are never read again during Viterbi or Greedy decoding, yet stay pinned in `AnalysisTemplate.MAP` forever.
    - Similarly, `wordData`, `igs` (`unmodifiableList`), `igJoined`, and `surface` are retained on every `AnalysisTemplate` and `CandidateContext` even though Viterbi decoding only reads `lemma`, `rIg`, `lastGroup`, `igsArray`, and the 4 prefixes (`f2Prefix`, `f3Prefix`, `f9Prefix`, `f17Prefix`).
 
 2. **`CandidateContext[16]` Preallocated Arrays & Per-Index Duplication (~110 MB)**:
-   - Every [`ScoredCandidate`](file:///home/dndara/work/zemberek-nlp/morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java#L605-L606) preallocates two 16-element arrays (`nonInitialByIndex = new CandidateContext[16]` and `initialByIndex = new CandidateContext[16]`, `160 bytes` for the two arrays alone).
-   - Because `public final int index` (the position `0..K-1` of the candidate within the current word's `WordAnalysis`) is stored as a field inside [`CandidateContext`](file:///home/dndara/work/zemberek-nlp/morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java#L484), the same `SingleAnalysis` allocates a brand-new **104-byte `CandidateContext` copy** (duplicating all 21 fields of `AnalysisTemplate`) for every distinct candidate index `0, 1, 2, ...` at which it appears across different words, and again for sentence-initial vs. non-initial positions.
+   - Every [`ScoredCandidate`](morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java#L605-L606) preallocates two 16-element arrays (`nonInitialByIndex = new CandidateContext[16]` and `initialByIndex = new CandidateContext[16]`, `160 bytes` for the two arrays alone).
+   - Because `public final int index` (the position `0..K-1` of the candidate within the current word's `WordAnalysis`) is stored as a field inside [`CandidateContext`](morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java#L484), the same `SingleAnalysis` allocates a brand-new **104-byte `CandidateContext` copy** (duplicating all 21 fields of `AnalysisTemplate`) for every distinct candidate index `0, 1, 2, ...` at which it appears across different words, and again for sentence-initial vs. non-initial positions.
 
 3. **Two Separate `SingleAnalysis` Caches (`AnalysisTemplate.MAP` + `FastDecoder.scoredMap`, ~30 MB)**:
    - Both `AnalysisTemplate.MAP` (static) and `FastDecoder.scoredMap` (instance) store `150,000` `ConcurrentHashMap.Node` wrappers keyed by the same `SingleAnalysis` objects, plus two `L1` arrays (`AnalysisTemplate.L1_CACHE` and `DecoderCache.l1Scored`).
@@ -61,9 +61,9 @@ We isolated the performance impact of each change on the 100k-paragraph corpus (
 | Change | Code Size | Why It Matters | `disambiguate` Cold Pass Time |
 | :--- | :---: | :--- | :---: |
 | **Baseline (`HEAD` before fixes)** | — | `assignId` increments counter on every uncached call after `MAX_MAP_ENTRIES`, breaking `biKeys`/`f2Keys`; `model.get(prefix + suffix)` allocates a `String` and runs `mphf.get()` on every transition miss (`98.4%` absent features). | `34,768.6 ms` (`105,843 tok/s`) |
-| **1. Fix `assignId` ID drift** ([`FastPerceptronAmbiguityResolver.java`](file:///home/dndara/work/zemberek-nlp/morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java#L161-L172)) | **`3 lines`** | When `map.size() >= MAX_MAP_ENTRIES`, returns a deterministic 20-bit hash `(key.hashCode() & 0x0FFFFF) \| 0x100000` instead of `counter.getAndIncrement()`. Keeps `biKeys` and `f2Keys` working even for uncached words! | `27,293.9 ms` (`135,054 tok/s`) (**+27.4%**) |
-| **2. `LossyIntLookup` 24-bit bitmap + 2-arg `get(prefix, suffix)`** ([`LossyIntLookup.java`](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/compression/LossyIntLookup.java#L23-L81)) | **`39 lines`** | Uses `2 MB` bitmap to reject `98.4%` of absent features via `(prefix.hashCode() * POW31[suffix.length()] + suffix.hashCode()) & 0xffffff` **before** concatenating `prefix + suffix` and **before** running `mphf.get()`. | `21,450.6 ms` (`171,843 tok/s`) (**+27.2%**) |
-| **3. Unambiguous pair (`P == 1 && K == 1`) fast collapse** ([`FastPerceptronAmbiguityResolver.java`](file:///home/dndara/work/zemberek-nlp/morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java#L1034-L1057)) | **`25 lines`** | Skips allocating 2D/3D transition grids (`biScores[][]`, `f2Scores[][]`, `f15Scores[][][]`, `bestScoreGrid[][]`) when two consecutive words have 1 analysis. | `20,955.2 ms` (`175,906 tok/s`) (**+2.4% cold, +4.9% warm**) |
+| **1. Fix `assignId` ID drift** ([`FastPerceptronAmbiguityResolver.java`](morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java#L161-L172)) | **`3 lines`** | When `map.size() >= MAX_MAP_ENTRIES`, returns a deterministic 20-bit hash `(key.hashCode() & 0x0FFFFF) \| 0x100000` instead of `counter.getAndIncrement()`. Keeps `biKeys` and `f2Keys` working even for uncached words! | `27,293.9 ms` (`135,054 tok/s`) (**+27.4%**) |
+| **2. `LossyIntLookup` 24-bit bitmap + 2-arg `get(prefix, suffix)`** ([`LossyIntLookup.java`](core/src/main/java/zemberek/core/compression/LossyIntLookup.java#L23-L81)) | **`39 lines`** | Uses `2 MB` bitmap to reject `98.4%` of absent features via `(prefix.hashCode() * POW31[suffix.length()] + suffix.hashCode()) & 0xffffff` **before** concatenating `prefix + suffix` and **before** running `mphf.get()`. | `21,450.6 ms` (`171,843 tok/s`) (**+27.2%**) |
+| **3. Unambiguous pair (`P == 1 && K == 1`) fast collapse** ([`FastPerceptronAmbiguityResolver.java`](morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java#L1034-L1057)) | **`25 lines`** | Skips allocating 2D/3D transition grids (`biScores[][]`, `f2Scores[][]`, `f15Scores[][][]`, `bestScoreGrid[][]`) when two consecutive words have 1 analysis. | `20,955.2 ms` (`175,906 tok/s`) (**+2.4% cold, +4.9% warm**) |
 
 > [!IMPORTANT]
 > Notice from the cache sweep in Section 1 that with Fix #1 (`assignId`) and Fix #2 (`LossyIntLookup.get(prefix, suffix)`), **increasing the cache size from `100K` to `150K` or `256K` only changed cold-pass speed by ~2% (`21.45s` vs `20.95s`)**, because:
@@ -100,7 +100,7 @@ Instead of increasing `MAX_MAP_ENTRIES` (which inflates the ~2 KB/entry object g
 
 ## 5. Verified Results After Implementing Approach B
 
-Approach B was implemented in [`FastPerceptronAmbiguityResolver.java`](file:///home/dndara/work/zemberek-nlp/morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java) (reducing file size by 23 lines: `+171 / -194` lines) alongside [`LossyIntLookup.java`](file:///home/dndara/work/zemberek-nlp/core/src/main/java/zemberek/core/compression/LossyIntLookup.java):
+Approach B was implemented in [`FastPerceptronAmbiguityResolver.java`](morphology/src/main/java/zemberek/morphology/ambiguity/fast/FastPerceptronAmbiguityResolver.java) (reducing file size by 23 lines: `+171 / -194` lines) alongside [`LossyIntLookup.java`](core/src/main/java/zemberek/core/compression/LossyIntLookup.java):
 
 | Metric (100,000 Paragraphs, `211,232` Sentences, `3,686,140` Tokens) | Zemberek `0.17.1` | Local Before Fixes (`HEAD`) | Earlier `150K` Cache Fix | **Approach B (Applied)** |
 | :--- | :---: | :---: | :---: | :---: |

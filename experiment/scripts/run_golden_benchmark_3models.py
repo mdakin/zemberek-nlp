@@ -25,7 +25,7 @@ import json
 import time
 import subprocess
 
-REPO_ROOT = "/home/dndara/work/zemberek-nlp"
+REPO_ROOT = "."
 DATA_DIR = os.path.join(REPO_ROOT, "data/ambiguity")
 GOLDEN_DIR = os.path.join(DATA_DIR, "golden")
 RESULTS_DIR = os.path.join(GOLDEN_DIR, "benchmark_results")

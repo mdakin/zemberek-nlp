@@ -9,8 +9,8 @@ import sys
 import json
 import subprocess
 
-DISTILLED_DIR = "/home/dndara/data/turkish/distilled"
-REPO_DATA_DIR = "/home/dndara/work/zemberek-nlp/data/ambiguity"
+DISTILLED_DIR = os.path.expanduser("~/data/turkish/distilled")
+REPO_DATA_DIR = "data/ambiguity"
 
 FILE_20K = os.path.join(DISTILLED_DIR, "distilled_20k_canonical.jsonl")
 FILE_10K_RAW = os.path.join(DISTILLED_DIR, "distilled_batch3_10k_annotated.jsonl")

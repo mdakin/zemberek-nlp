@@ -44,7 +44,7 @@ import zemberek.tokenization.TurkishTokenizer;
 
 /**
  * Multi-threaded Zemberek Candidate JSONL Generator (ZCS-v2) for the 1,000-sentence
- * test and training slices in /home/dndara/data/turkish/selected_slices.
+ * test and training slices in ${ZEMBEREK_DATA_DIR:-~/data/turkish}/selected_slices.
  *
  * Key upgrades over legacy DisambiguationCandidateExtractor:
  * 1. Globally unique sentence IDs (<slice_name>_s0001 .. <slice_name>_s1000) so slices
@@ -64,12 +64,12 @@ public class SliceCandidateGenerator extends ConsoleApp {
   @Parameter(
       names = {"--slicesDir", "-i"},
       description = "Input root directory containing test_slices/ and train_slices/")
-  public Path slicesDir = Paths.get("/home/dndara/data/turkish/selected_slices");
+  public Path slicesDir = Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/selected_slices");
 
   @Parameter(
       names = {"--outputDir", "-o"},
       description = "Output root directory for generated candidate JSONL files")
-  public Path outputDir = Paths.get("/home/dndara/data/turkish/annotated_slices");
+  public Path outputDir = Paths.get(System.getenv().getOrDefault("ZEMBEREK_DATA_DIR", System.getProperty("user.home") + "/data/turkish") + "/annotated_slices");
 
   @Parameter(
       names = {"--pool", "-p"},

@@ -20,13 +20,13 @@ public class CollectUnparsedWordsTest {
     Path inDir = temp.newFolder("clean_text").toPath();
     Path file1 = inDir.resolve("sample1.txt");
 
-    // "kitap", "okula", "gitti", "Ankara'da" are valid Turkish words.
-    // "koronavirüs", "blablabla" are unparsed words.
+    // "kitap", "okula", "gitti", "Ankara'da", "koronavirüs" (added in #386) are valid Turkish words.
+    // "hedehöde", "blablabla" are unparsed words.
     String text1 =
         "Ali dün akşam okula gitti.\n"
             + "Ankara'da güzel bir gün yaşandı.\n"
             + "Yeni koronavirüs dalgası başladı.\n"
-            + "Herkes koronavirüs hakkında konuşuyor.\n"
+            + "Herkes hedehöde hakkında konuşuyor, yine hedehöde denildi.\n"
             + "Bu bir blablabla kelimesidir.\n";
     Files.write(file1, text1.getBytes(StandardCharsets.UTF_8));
 
@@ -53,17 +53,18 @@ public class CollectUnparsedWordsTest {
       Assert.assertNotEquals("okula", word);
       Assert.assertNotEquals("gitti", word);
       Assert.assertNotEquals("güzel", word);
+      Assert.assertNotEquals("koronavirüs", word);
     }
 
-    // Verify "koronavirüs" is collected with frequency 2
-    boolean foundCorona = false;
+    // Verify "hedehöde" is collected with frequency 2
+    boolean foundHede = false;
     for (String line : lines) {
-      if (line.startsWith("koronavirüs\t")) {
-        foundCorona = true;
-        Assert.assertEquals("koronavirüs\t2", line);
+      if (line.startsWith("hedehöde\t")) {
+        foundHede = true;
+        Assert.assertEquals("hedehöde\t2", line);
       }
     }
-    Assert.assertTrue("koronavirüs must be detected as unparsed with frequency 2", foundCorona);
+    Assert.assertTrue("hedehöde must be detected as unparsed with frequency 2", foundHede);
 
     // Verify "blablabla" is collected with frequency 1
     boolean foundBla = false;
@@ -75,7 +76,7 @@ public class CollectUnparsedWordsTest {
     }
     Assert.assertTrue("blablabla must be detected as unparsed with frequency 1", foundBla);
 
-    // The first word after header must be "koronavirüs" because it has the highest frequency (2)
-    Assert.assertTrue("First entry must be koronavirüs", lines.get(1).startsWith("koronavirüs\t"));
+    // The first word after header must be "hedehöde" because it has the highest frequency (2)
+    Assert.assertTrue("First entry must be hedehöde", lines.get(1).startsWith("hedehöde\t"));
   }
 }

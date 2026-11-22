@@ -22,7 +22,7 @@ After **[PR #345](https://github.com/ahmetaa/zemberek-nlp/pull/345)** merged (`9
 
 ### 1.2 Throughput & Startup Performance vs `0.18.0` Release
 
-Measured in isolated subprocess runs of [EvaluateNormalizationBenchmarks.java](file:///home/dndara/.gemini/antigravity/brain/e881e065-186e-4459-9937-8488961d947e/scratch/EvaluateNormalizationBenchmarks.java) (`-Xmx6g`, excluding Zemberek jars from external dependencies):
+Measured in isolated subprocess runs of [EvaluateNormalizationBenchmarks.java](EvaluateNormalizationBenchmarks.java) (`-Xmx6g`, excluding Zemberek jars from external dependencies):
 
 | System Configuration | `init` (s) | `nasty_5k` (`tok/s`) | `MultiLexNorm` (`tok/s`) | `BOUN Clean` (`tok/s`) | `GECTurk` (`tok/s`) | `TRSpell10` Exact (`w/s`) | `TRSpell10` DiacIgn (`w/s`) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -44,16 +44,16 @@ Key headline wins (**`0.18.0` Release (`9b9d8490`)** → **Combined Stack (`#346
 
 ## 2. `nasty_5k` LLM-Annotated Benchmark Construction
 
-To evaluate noisy Turkish social-media normalization at scale, a 5,000-sentence benchmark (`nasty_5k`) was curated from high-noise user-generated text (including `kadinlar_klubu.txt`) and annotated with `gemini-4-hydrogen` via the Gemini Batch API (`group=10` sentences per call, `medium` reasoning, `61,925/61,925` tokens aligned with `0` fallbacks, total batch cost \$4.10):
+To evaluate noisy Turkish social-media normalization at scale, a 5,000-sentence benchmark (`nasty_5k`) was curated from high-noise user-generated text (including `kadinlar_klubu.txt`) and annotated with `gemini-2.5-pro` via the Gemini Batch API (`group=10` sentences per call, `medium` reasoning, `61,925/61,925` tokens aligned with `0` fallbacks, total batch cost \$4.10):
 
-- **Sentence pairs TSV (`5,000` sentences)**: [nasty_5000_pairs.tsv](file:///home/dndara/data/turkish/normalization/custom_benchmark/nasty_5k/llm_gold/exports/nasty_5000_pairs.tsv) (`56,420` raw tokens, `59,921` gold tokens, `34,970` raw Levenshtein word edits / `58.36%` baseline WER vs gold)
-- **CoNLL-style `.norm` export**: [nasty_5000.norm](file:///home/dndara/data/turkish/normalization/custom_benchmark/nasty_5k/llm_gold/exports/nasty_5000.norm)
+- **Sentence pairs TSV (`5,000` sentences)**: `nasty_5000_pairs.tsv` (`56,420` raw tokens, `59,921` gold tokens, `34,970` raw Levenshtein word edits / `58.36%` baseline WER vs gold)
+- **CoNLL-style `.norm` export**: `nasty_5000.norm`
 
 ---
 
 ## 3. Forensic Re-Analysis of Roadmap Claims vs `upstream/master`
 
-Every claim in [TURKISH_NORMALIZATION_INVESTIGATION_AND_ROADMAP.md](file:///home/dndara/.gemini/antigravity/brain/e13f6e6b-cb12-4920-b467-a54e05357b91/TURKISH_NORMALIZATION_INVESTIGATION_AND_ROADMAP.md) was re-verified directly against `upstream/master`:
+Every claim in [TURKISH_NORMALIZATION_INVESTIGATION_AND_ROADMAP.md](TURKISH_NORMALIZATION_INVESTIGATION_AND_ROADMAP.md) was re-verified directly against `upstream/master`:
 
 | Roadmap ID | Claim Summary | Verdict vs `upstream/master` | PR / Resolution |
 | :--- | :--- | :--- | :--- |
@@ -98,7 +98,7 @@ Every claim in [TURKISH_NORMALIZATION_INVESTIGATION_AND_ROADMAP.md](file:///home
 
 ## 5. Multi-Benchmark Ablation Details
 
-Evaluated via [EvaluateNormalizationBenchmarks.java](file:///home/dndara/.gemini/antigravity/brain/e881e065-186e-4459-9937-8488961d947e/scratch/EvaluateNormalizationBenchmarks.java):
+Evaluated via [EvaluateNormalizationBenchmarks.java](EvaluateNormalizationBenchmarks.java):
 - **Mukayese TRSpell10** (`9,766` words: `6,766` misspelled, `3,000` clean).
 - **`nasty_5k`** (`5,000` sentences, `56,420` raw / `59,921` gold tokens, raw edit dist `34,970`).
 - **MultiLexNorm TR** (`143` sentences, `1,537` raw / `1,567` gold tokens, raw edit dist `506`).
@@ -122,7 +122,7 @@ Evaluated via [EvaluateNormalizationBenchmarks.java](file:///home/dndara/.gemini
 
 ## 6. Upgraded Leak-Free Normalization Runtime Data (`norm-data-v2`)
 
-To rebuild Zemberek's external normalization models cleanly using PR `#348`'s fixed `NoisyWordsLexiconGenerator` without memorizing benchmark sentences, we authored [BuildNormDataV2.java](file:///home/dndara/.gemini/antigravity/brain/e881e065-186e-4459-9937-8488961d947e/scratch/BuildNormDataV2.java) and [SanitizeNormDataV2.java](file:///home/dndara/.gemini/antigravity/brain/e881e065-186e-4459-9937-8488961d947e/scratch/SanitizeNormDataV2.java) outside the repo under `norm-data-v2`:
+To rebuild Zemberek's external normalization models cleanly using PR `#348`'s fixed `NoisyWordsLexiconGenerator` without memorizing benchmark sentences, we authored [BuildNormDataV2.java](BuildNormDataV2.java) and [SanitizeNormDataV2.java](SanitizeNormDataV2.java) outside the repo under `norm-data-v2`:
 
 - **Zero-leakage guard**: Excluded all `32,361` unique normalized sentences across `nasty_5k`, `MultiLexNorm TR`, and `GECTurk/BOUN` train/dev/test splits (`skippedLeak=584` on the final clean LM stream).
 - **Cleaned 2-gram `SmoothLm` (`16 MB`, `285,867` 1-grams, `1,909,002` 2-grams)**: Trained on `4,050,000` clean sentences (`53.08M` tokens across `ntv-750k`, `subtitle-tr-10M`, `cnnturk`, `haberturk`, `onedio`, `vikipedi`) with `MIN_UNIGRAM_COUNT=3`, `MIN_BIGRAM_COUNT=3`, absolute discounting `D=0.75`, and calibrated `p1[0] = 2.0e-7` (`ln = -15.425`).
