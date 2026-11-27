@@ -716,6 +716,7 @@ impl<'a> CompactStemEndingSpellChecker<'a> {
         if cands.is_empty() {
             return Vec::new();
         }
+        let input_is_lower = WordAnalysisSurfaceFormatter::guess_case(word) == CaseType::LowerCase;
         let mut scored: Vec<(f32, usize, String)> = Vec::with_capacity(cands.len());
         for (idx, c) in cands.into_iter().enumerate() {
             let low = TurkishAlphabet::to_lower_tr(&c.surface);
@@ -727,8 +728,13 @@ impl<'a> CompactStemEndingSpellChecker<'a> {
             if let Some(nxt) = next_lower {
                 lm_lp += lm.bigram_log_prob(Some(&low), Some(nxt));
             }
+            let case_bonus = if input_is_lower && c.surface == low {
+                0.15
+            } else {
+                0.0
+            };
             let penalty = 2.4 * c.edit_cost + 0.65 * (c.diacritic_diffs as f32);
-            scored.push((lm_lp - penalty, idx, c.surface));
+            scored.push((lm_lp + case_bonus - penalty, idx, c.surface));
         }
         scored.sort_by(|a, b| java_float_cmp(b.0, a.0).then_with(|| a.1.cmp(&b.1)));
         scored.into_iter().map(|(_, _, s)| s).collect()

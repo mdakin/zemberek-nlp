@@ -741,11 +741,26 @@ async function runRealChromiumE2E() {
           type: "PROXY_OFFSCREEN",
           payload: { type: "CHECK_PARAGRAPH", text: "Gökbörü'de toplantı hazır." }
         });
-        return { words: res.userWords, issueCount: check.issues.length };
+        const konrolStandalone = await chrome.runtime.sendMessage({
+          type: "PROXY_OFFSCREEN",
+          payload: { type: "CHECK_PARAGRAPH", text: "konrol" }
+        });
+        const konrolSentNorm = await chrome.runtime.sendMessage({
+          type: "PROXY_OFFSCREEN",
+          payload: { type: "NORMALIZE", text: "Hemen konrol yapalım." }
+        });
+        return {
+          words: res.userWords,
+          issueCount: check.issues.length,
+          konrolRep: konrolStandalone.issues[0]?.replacement,
+          konrolSentNorm: konrolSentNorm.result,
+        };
       })()`
     );
     assert.ok(dictResult.words.includes("Gökbörü"), "User word persisted in chrome.storage");
     assert.equal(dictResult.issueCount, 0, "Added custom proper noun must produce 0 issues");
+    assert.equal(dictResult.konrolRep, "kontrol", "Standalone 'konrol' must suggest 'kontrol'");
+    assert.equal(dictResult.konrolSentNorm, "Hemen kontrol yapalım.", "'konrol' in unattested bigram context must normalize to 'kontrol'");
 
     // Verify Options page (`options.html`) loads & updates engineProfile / circumflexMode
     const { targetId: optTarget } = await cdp.send("Target.createTarget", {

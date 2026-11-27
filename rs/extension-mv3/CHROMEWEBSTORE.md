@@ -72,6 +72,7 @@ Turkish
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
+| 0.2.4 | 2026-11-27 | Added residual spellcheck fallback in Studio mode so unattested-bigram edit-distance-1 typos (e.g. `konrol -> kontrol`, `kitablar -> kitaplar`) are caught in both in-page checking and `Düzelt` normalization, with lowercase casing tie-breaking. | Draft |
 | 0.2.2 | 2026-11-27 | Updated extension toolbar, store, and UI branding to the official Zemberek spiral mainspring SVG/PNG icon set (16/32/48/128px). | Draft |
 | 0.2.1 | 2026-11-27 | Fixed BFCache port disconnect runtime.lastError in offscreen worker, eliminated extra scrollbar on 100vh pages and Side Panel, and enforced strict `connect-src 'self'` local-only CSP. | Draft |
 | 0.2.0 | 2026-11-27 | Streamlined Popup & Side Panel UI with icon actions, moved engine/circumflex controls to Extension Options, fixed Side Panel morphological analysis wrapping, suppressed overlapping native Chrome spellcheck squiggles on Turkish fields, and added automatic non-Turkish text gating. | Draft |

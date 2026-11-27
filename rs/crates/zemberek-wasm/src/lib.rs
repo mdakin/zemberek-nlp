@@ -19,7 +19,7 @@ use zemberek_pack::{
     SECT_MORPH_FST, SECT_NORM_KNOWLEDGE, SECT_NORM_PERCEPTRON, SECT_QWT_MPHF, ZMBK_ALIGNMENT,
 };
 use zemberek_spell::CompactStemEndingSpellChecker;
-use zemberek_tok::{span_tokenize, TurkishSentenceExtractor};
+use zemberek_tok::{span_tokenize, CasingShape, TurkishSentenceExtractor};
 
 pub const INPUT_BUF_CAP: usize = 64 * 1024;
 pub const OUTPUT_BUF_CAP: usize = 128 * 1024;
@@ -579,6 +579,262 @@ fn encode_issues_into(issues: &[SpanIssue], out_buf: &mut [u8]) -> Option<usize>
     Some(w.pos)
 }
 
+fn is_strict_valid_word(pipe: &mut FullPipeline<'static>, surface: &str, has_dyn: bool) -> bool {
+    let wh = fnv1a64(surface.as_bytes());
+    let slot_idx = (wh as usize) & LITE_WORD_CACHE_MASK;
+    if !has_dyn && pipe.caches.lite_words[slot_idx].hash == wh {
+        return pipe.caches.lite_words[slot_idx].valid;
+    }
+    let dyn_opt = if has_dyn {
+        Some(&pipe.dynamic_trie)
+    } else {
+        None
+    };
+    let wa = pipe
+        .morph_strict
+        .analyze_word(surface, dyn_opt, &mut pipe.scratch);
+    let case_type = WordAnalysisSurfaceFormatter::guess_case(surface);
+    let apos = if surface.contains('’') {
+        Some("’")
+    } else if surface.contains('\'') {
+        Some("'")
+    } else {
+        None
+    };
+    let ok = wa.analyses.iter().any(|a| {
+        !a.is_unknown()
+            && !a.is_runtime(&pipe.graph)
+            && WordAnalysisSurfaceFormatter::can_be_formatted(a, &pipe.graph, case_type)
+            && WordAnalysisSurfaceFormatter::format_to_case(a, &pipe.graph, case_type, apos)
+                == surface
+    });
+    if !has_dyn {
+        pipe.caches.lite_words[slot_idx] = LiteWordSlot { hash: wh, valid: ok };
+    }
+    ok
+}
+
+fn suggest_for_token(
+    pipe: &mut FullPipeline<'static>,
+    toks: &[zemberek_tok::SpanToken],
+    idx: usize,
+    has_dyn: bool,
+) -> Vec<String> {
+    pipe.ensure_spell_ready();
+    let dyn_opt = if has_dyn {
+        Some(&pipe.dynamic_trie)
+    } else {
+        None
+    };
+    let has_bigrams = pipe
+        .clean_lm
+        .as_ref()
+        .is_some_and(|lm| !lm.bigrams.is_empty());
+    let prev_low = if has_bigrams && idx > 0 && !toks[idx - 1].is_immutable() {
+        Some(toks[idx - 1].lower.as_str())
+    } else {
+        None
+    };
+    let next_low = if has_bigrams && idx + 1 < toks.len() && !toks[idx + 1].is_immutable() {
+        Some(toks[idx + 1].lower.as_str())
+    } else {
+        None
+    };
+    let surface = &toks[idx].surface;
+    let ranked = match (&pipe.spell, &pipe.clean_lm) {
+        (Some(sp_chk), Some(lm)) => sp_chk.suggest_ranked(
+            surface,
+            prev_low,
+            next_low,
+            lm,
+            &pipe.morph_strict,
+            dyn_opt,
+            &mut pipe.scratch,
+        ),
+        (Some(sp_chk), None) => sp_chk
+            .suggest_scored(surface, &pipe.morph_strict, dyn_opt, &mut pipe.scratch)
+            .into_iter()
+            .map(|c| c.surface)
+            .collect(),
+        _ => Vec::new(),
+    };
+    ranked
+        .into_iter()
+        .filter(|s| s != surface)
+        .take(3)
+        .collect()
+}
+
+/// Supplements conservative `SpanLatticePerceptronNormalizer` span diagnostics with
+/// `CompactStemEndingSpellChecker` for any uncovered OOV spelling mistakes (such as
+/// unattested-bigram edit-distance-1 typos like `"konrol"` or `"kitablar"`).
+fn append_uncovered_spell_issues(
+    pipe: &mut FullPipeline<'static>,
+    paragraph: &str,
+    issues: &mut Vec<SpanIssue>,
+) {
+    if paragraph.is_empty() || !pipe.has_ending_trie {
+        return;
+    }
+    let has_dyn = !pipe.dynamic_trie.items().is_empty();
+    let sent_spans = TurkishSentenceExtractor::DEFAULT.extract_raw_spans(paragraph);
+    let initial_len = issues.len();
+
+    for sp in sent_spans {
+        let sent_str = &paragraph[sp.utf8_start..sp.utf8_end];
+        let toks = span_tokenize(sent_str);
+        for idx in 0..toks.len() {
+            let tok = &toks[idx];
+            if tok.is_immutable()
+                || tok.contains_digit()
+                || tok.surface.chars().count() < 3
+                || tok.lower.bytes().any(|b| matches!(b, b'w' | b'x' | b'q'))
+                || tok.shape == CasingShape::Upper
+                || (idx > 0 && tok.shape == CasingShape::Title)
+            {
+                continue;
+            }
+            let u8_start = sp.utf8_start + tok.utf8_start;
+            let u8_end = sp.utf8_start + tok.utf8_end;
+            if issues[..initial_len]
+                .iter()
+                .any(|iss| iss.utf8_start < u8_end && iss.utf8_end > u8_start)
+            {
+                continue;
+            }
+            if is_strict_valid_word(pipe, &tok.surface, has_dyn) {
+                continue;
+            }
+            if pipe
+                .clean_lm
+                .as_ref()
+                .is_some_and(|lm| lm.unigram_count(&tok.lower) >= 25)
+            {
+                continue;
+            }
+
+            let suggestions = suggest_for_token(pipe, &toks, idx, has_dyn);
+            if suggestions.is_empty() {
+                continue;
+            }
+            let primary = suggestions[0].clone();
+            let kind = if TurkishAlphabet::equals_ignore_diacritics(&tok.surface, &primary) {
+                IssueKind::DeasciifyOrColloquial
+            } else {
+                IssueKind::Spelling
+            };
+            issues.push(SpanIssue {
+                start_tok: idx,
+                end_tok: idx + 1,
+                utf8_start: u8_start,
+                utf8_end: u8_end,
+                utf16_start: sp.utf16_start + tok.utf16_start,
+                utf16_end: sp.utf16_start + tok.utf16_end,
+                kind,
+                raw_text: tok.surface.clone(),
+                replacement: primary,
+                suggestions,
+            });
+        }
+    }
+
+    if issues.len() > initial_len {
+        issues.sort_by_key(|i| i.utf8_start);
+    }
+}
+
+/// Repairs clear residual lowercase OOV 1-edit typos left behind as `IDENTITY` by the conservative
+/// social-media sentence normalizer (e.g., `"konrol" -> "kontrol"`, `"kitablar" -> "kitaplar"`),
+/// without touching capitalized names, acronyms, foreign `w/q/x` words, or attested loanwords.
+fn repair_residual_lowercase_typos(
+    pipe: &mut FullPipeline<'static>,
+    normalized_sent: String,
+) -> String {
+    if normalized_sent.is_empty() || !pipe.has_ending_trie {
+        return normalized_sent;
+    }
+    let has_dyn = !pipe.dynamic_trie.items().is_empty();
+    let toks = span_tokenize(&normalized_sent);
+    let mut replacements: Vec<(usize, usize, String)> = Vec::new();
+
+    for idx in 0..toks.len() {
+        let tok = &toks[idx];
+        let char_len = tok.surface.chars().count();
+        if tok.is_immutable()
+            || tok.shape != CasingShape::Lower
+            || !(4..=18).contains(&char_len)
+            || tok.contains_digit()
+            || tok.lower.bytes().any(|b| matches!(b, b'w' | b'x' | b'q'))
+        {
+            continue;
+        }
+        let raw_uni_cnt = pipe
+            .clean_lm
+            .as_ref()
+            .map_or(0, |lm| lm.unigram_count(&tok.lower));
+        if raw_uni_cnt >= 25 {
+            continue;
+        }
+        let dyn_opt = if has_dyn {
+            Some(&pipe.dynamic_trie)
+        } else {
+            None
+        };
+        let wa = pipe
+            .morph_informal
+            .analyze_word(&tok.surface, dyn_opt, &mut pipe.scratch);
+        if wa
+            .analyses
+            .iter()
+            .any(|a| !a.is_unknown() && !a.is_runtime(&pipe.graph))
+        {
+            continue;
+        }
+
+        pipe.ensure_spell_ready();
+        let dyn_opt = if has_dyn {
+            Some(&pipe.dynamic_trie)
+        } else {
+            None
+        };
+        let scored = match pipe.spell {
+            Some(ref sp_chk) => {
+                sp_chk.suggest_scored(&tok.surface, &pipe.morph_strict, dyn_opt, &mut pipe.scratch)
+            }
+            None => continue,
+        };
+        let ranked = suggest_for_token(pipe, &toks, idx, has_dyn);
+        let Some(best_surf) = ranked.into_iter().find(|s| s == &TurkishAlphabet::to_lower_tr(s))
+        else {
+            continue;
+        };
+        let within_one_edit = scored
+            .iter()
+            .any(|sc| sc.surface == best_surf && sc.edit_cost <= 1.0);
+        let cand_uni_cnt = pipe
+            .clean_lm
+            .as_ref()
+            .map_or(0, |lm| lm.unigram_count(&best_surf));
+        if within_one_edit && cand_uni_cnt >= 40 && cand_uni_cnt >= raw_uni_cnt.saturating_mul(25) {
+            replacements.push((tok.utf8_start, tok.utf8_end, best_surf));
+        }
+    }
+
+    if replacements.is_empty() {
+        return normalized_sent;
+    }
+
+    let mut rebuilt = String::with_capacity(normalized_sent.len() + 8);
+    let mut pos = 0usize;
+    for (s, e, rep) in replacements {
+        rebuilt.push_str(&normalized_sent[pos..s]);
+        rebuilt.push_str(&rep);
+        pos = e;
+    }
+    rebuilt.push_str(&normalized_sent[pos..]);
+    rebuilt
+}
+
 fn check_paragraph_lite(pipe: &mut FullPipeline<'static>, paragraph: &str) -> Vec<SpanIssue> {
     if paragraph.is_empty() || !pipe.has_ending_trie {
         return Vec::new();
@@ -598,93 +854,10 @@ fn check_paragraph_lite(pipe: &mut FullPipeline<'static>, paragraph: &str) -> Ve
             {
                 continue;
             }
-            let wh = fnv1a64(tok.surface.as_bytes());
-            let slot_idx = (wh as usize) & LITE_WORD_CACHE_MASK;
-            let is_valid = if !has_dyn && pipe.caches.lite_words[slot_idx].hash == wh {
-                pipe.caches.lite_words[slot_idx].valid
-            } else {
-                let dyn_opt = if has_dyn {
-                    Some(&pipe.dynamic_trie)
-                } else {
-                    None
-                };
-                let wa = pipe
-                    .morph_strict
-                    .analyze_word(&tok.surface, dyn_opt, &mut pipe.scratch);
-                let case_type = WordAnalysisSurfaceFormatter::guess_case(&tok.surface);
-                let apos = if tok.surface.contains('’') {
-                    Some("’")
-                } else if tok.surface.contains('\'') {
-                    Some("'")
-                } else {
-                    None
-                };
-                let ok = wa.analyses.iter().any(|a| {
-                    !a.is_unknown()
-                        && !a.is_runtime(&pipe.graph)
-                        && WordAnalysisSurfaceFormatter::can_be_formatted(a, &pipe.graph, case_type)
-                        && WordAnalysisSurfaceFormatter::format_to_case(
-                            a,
-                            &pipe.graph,
-                            case_type,
-                            apos,
-                        ) == tok.surface
-                });
-                if !has_dyn {
-                    pipe.caches.lite_words[slot_idx] = LiteWordSlot { hash: wh, valid: ok };
-                }
-                ok
-            };
-
-            if is_valid {
+            if is_strict_valid_word(pipe, &tok.surface, has_dyn) {
                 continue;
             }
-
-            pipe.ensure_spell_ready();
-            let dyn_opt = if has_dyn {
-                Some(&pipe.dynamic_trie)
-            } else {
-                None
-            };
-            let has_bigrams = pipe
-                .clean_lm
-                .as_ref()
-                .is_some_and(|lm| !lm.bigrams.is_empty());
-            let prev_low = if has_bigrams && idx > 0 && !toks[idx - 1].is_immutable() {
-                Some(toks[idx - 1].lower.as_str())
-            } else {
-                None
-            };
-            let next_low = if has_bigrams && idx + 1 < toks.len() && !toks[idx + 1].is_immutable()
-            {
-                Some(toks[idx + 1].lower.as_str())
-            } else {
-                None
-            };
-
-            let ranked = match (&pipe.spell, &pipe.clean_lm) {
-                (Some(sp_chk), Some(lm)) => sp_chk.suggest_ranked(
-                    &tok.surface,
-                    prev_low,
-                    next_low,
-                    lm,
-                    &pipe.morph_strict,
-                    dyn_opt,
-                    &mut pipe.scratch,
-                ),
-                (Some(sp_chk), None) => sp_chk
-                    .suggest_scored(&tok.surface, &pipe.morph_strict, dyn_opt, &mut pipe.scratch)
-                    .into_iter()
-                    .map(|c| c.surface)
-                    .collect(),
-                _ => Vec::new(),
-            };
-
-            let suggestions: Vec<String> = ranked
-                .into_iter()
-                .filter(|s| s != &tok.surface)
-                .take(3)
-                .collect();
+            let suggestions = suggest_for_token(pipe, &toks, idx, has_dyn);
             if suggestions.is_empty() {
                 continue;
             }
@@ -744,7 +917,11 @@ pub extern "C" fn zmbk_check_paragraph(in_len: u32, flags: u32) -> i32 {
                 Some(&pipe.dynamic_trie)
             };
             match pipe.norm {
-                Some(ref nm) => nm.check_paragraph(paragraph, dyn_opt, &mut pipe.scratch),
+                Some(ref nm) => {
+                    let mut iss = nm.check_paragraph(paragraph, dyn_opt, &mut pipe.scratch);
+                    append_uncovered_spell_issues(pipe, paragraph, &mut iss);
+                    iss
+                }
                 None => check_paragraph_lite(pipe, paragraph),
             }
         } else {
@@ -793,11 +970,6 @@ pub extern "C" fn zmbk_normalize(in_len: u32) -> i32 {
         } else if pipe.has_deasc {
             pipe.ensure_deasc_ready();
         }
-        let dyn_opt = if pipe.dynamic_trie.items().is_empty() {
-            None
-        } else {
-            Some(&pipe.dynamic_trie)
-        };
 
         let spans = TurkishSentenceExtractor::DEFAULT.extract_raw_spans(text);
         if spans.is_empty() {
@@ -809,8 +981,14 @@ pub extern "C" fn zmbk_normalize(in_len: u32) -> i32 {
         for sp in spans {
             out.push_str(&text[cursor..sp.utf8_start]);
             let raw_sent = &text[sp.utf8_start..sp.utf8_end];
+            let dyn_opt = if pipe.dynamic_trie.items().is_empty() {
+                None
+            } else {
+                Some(&pipe.dynamic_trie)
+            };
             if let Some(ref nm) = pipe.norm {
-                out.push_str(&nm.normalize(raw_sent, dyn_opt, &mut pipe.scratch));
+                let norm_sent = nm.normalize(raw_sent, dyn_opt, &mut pipe.scratch);
+                out.push_str(&repair_residual_lowercase_typos(pipe, norm_sent));
             } else if let Some(ref dc) = pipe.deasc {
                 out.push_str(&dc.deasciify(raw_sent, dyn_opt, &mut pipe.scratch));
             } else {
