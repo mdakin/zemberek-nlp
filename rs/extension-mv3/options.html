@@ -71,6 +71,12 @@
         gap: 8px;
       }
 
+      @media (prefers-color-scheme: dark) {
+        h1 img {
+          filter: invert(0.95);
+        }
+      }
+
       .group {
         background: var(--surface);
         border: 1px solid var(--border);

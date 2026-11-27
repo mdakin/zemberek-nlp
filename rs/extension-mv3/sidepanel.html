@@ -79,6 +79,12 @@
         white-space: nowrap;
       }
 
+      @media (prefers-color-scheme: dark) {
+        .header h1 img {
+          filter: invert(0.95);
+        }
+      }
+
       .header-right {
         display: flex;
         align-items: center;

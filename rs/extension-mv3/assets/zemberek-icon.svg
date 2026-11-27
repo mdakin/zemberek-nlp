@@ -28,8 +28,8 @@
      inkscape:cy="19.884726"
      inkscape:window-width="2806"
      inkscape:window-height="1779"
-     inkscape:window-x="430"
-     inkscape:window-y="50"
+     inkscape:window-x="441"
+     inkscape:window-y="86"
      inkscape:window-maximized="0"
      inkscape:current-layer="layer1" />
   <defs
@@ -38,17 +38,9 @@
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1">
-    <rect
-       style="fill:#ffb054;fill-opacity:1"
-       id="rect1"
-       width="46.926033"
-       height="46.829971"
-       x="0.52833813"
-       y="0.67243034"
-       ry="2.9779058" />
     <path
        sodipodi:type="spiral"
-       style="fill:none;fill-rule:evenodd;stroke:#000000"
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1.51324655;stroke-dasharray:none;stroke-linecap:round"
        id="path1"
        sodipodi:cx="30.643612"
        sodipodi:cy="0.86455333"
