@@ -79,7 +79,7 @@ function verifyStaticMv3Compliance() {
   assert.ok(manifest.description.length <= 132, "Manifest description must be <= 132 chars");
 
   // Verify real separate PNG files with exact IHDR pixel dimensions
-  for (const size of [16, 48, 128]) {
+  for (const size of [16, 32, 48, 128]) {
     const iconRel = manifest.icons[String(size)];
     const iconBytes = fs.readFileSync(path.join(distDir, iconRel));
     assert.equal(iconBytes.subarray(1, 4).toString("ascii"), "PNG");
