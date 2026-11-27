@@ -971,32 +971,90 @@ pub extern "C" fn zmbk_normalize(in_len: u32) -> i32 {
             pipe.ensure_deasc_ready();
         }
 
-        let spans = TurkishSentenceExtractor::DEFAULT.extract_raw_spans(text);
-        if spans.is_empty() {
-            return write_output_bytes(text.as_bytes());
+        let mut out = String::with_capacity(text.len() + 32);
+        let bytes = text.as_bytes();
+        let mut line_start = 0usize;
+
+        while line_start < bytes.len() {
+            let mut line_end = line_start;
+            while line_end < bytes.len() && bytes[line_end] != b'\n' && bytes[line_end] != b'\r' {
+                line_end += 1;
+            }
+            let line = &text[line_start..line_end];
+
+            // Preserve leading and trailing horizontal whitespace on each line verbatim
+            let mut trim_s = 0usize;
+            for ch in line.chars() {
+                if ch.is_whitespace() {
+                    trim_s += ch.len_utf8();
+                } else {
+                    break;
+                }
+            }
+            if trim_s >= line.len() {
+                out.push_str(line);
+            } else {
+                let mut trim_e = line.len();
+                for ch in line[trim_s..].chars().rev() {
+                    if ch.is_whitespace() {
+                        trim_e -= ch.len_utf8();
+                    } else {
+                        break;
+                    }
+                }
+                out.push_str(&line[..trim_s]);
+                let core_line = &line[trim_s..trim_e];
+
+                if core_line.len() <= 1200 {
+                    let dyn_opt = if pipe.dynamic_trie.items().is_empty() {
+                        None
+                    } else {
+                        Some(&pipe.dynamic_trie)
+                    };
+                    if let Some(ref nm) = pipe.norm {
+                        let norm_sent = nm.normalize(core_line, dyn_opt, &mut pipe.scratch);
+                        out.push_str(&repair_residual_lowercase_typos(pipe, norm_sent));
+                    } else if let Some(ref dc) = pipe.deasc {
+                        out.push_str(&dc.deasciify(core_line, dyn_opt, &mut pipe.scratch));
+                    } else {
+                        out.push_str(core_line);
+                    }
+                } else {
+                    let spans = TurkishSentenceExtractor::DEFAULT.from_paragraph_spans(core_line);
+                    let mut cursor = 0usize;
+                    for sp in spans {
+                        out.push_str(&core_line[cursor..sp.utf8_start]);
+                        let raw_sent = &core_line[sp.utf8_start..sp.utf8_end];
+                        let dyn_opt = if pipe.dynamic_trie.items().is_empty() {
+                            None
+                        } else {
+                            Some(&pipe.dynamic_trie)
+                        };
+                        if let Some(ref nm) = pipe.norm {
+                            let norm_sent = nm.normalize(raw_sent, dyn_opt, &mut pipe.scratch);
+                            out.push_str(&repair_residual_lowercase_typos(pipe, norm_sent));
+                        } else if let Some(ref dc) = pipe.deasc {
+                            out.push_str(&dc.deasciify(raw_sent, dyn_opt, &mut pipe.scratch));
+                        } else {
+                            out.push_str(raw_sent);
+                        }
+                        cursor = sp.utf8_end;
+                    }
+                    out.push_str(&core_line[cursor..]);
+                }
+
+                out.push_str(&line[trim_e..]);
+            }
+
+            // Copy exact `\r` / `\n` sequence between lines
+            let mut nl_end = line_end;
+            while nl_end < bytes.len() && (bytes[nl_end] == b'\n' || bytes[nl_end] == b'\r') {
+                nl_end += 1;
+            }
+            out.push_str(&text[line_end..nl_end]);
+            line_start = nl_end;
         }
 
-        let mut out = String::with_capacity(text.len() + 32);
-        let mut cursor = 0usize;
-        for sp in spans {
-            out.push_str(&text[cursor..sp.utf8_start]);
-            let raw_sent = &text[sp.utf8_start..sp.utf8_end];
-            let dyn_opt = if pipe.dynamic_trie.items().is_empty() {
-                None
-            } else {
-                Some(&pipe.dynamic_trie)
-            };
-            if let Some(ref nm) = pipe.norm {
-                let norm_sent = nm.normalize(raw_sent, dyn_opt, &mut pipe.scratch);
-                out.push_str(&repair_residual_lowercase_typos(pipe, norm_sent));
-            } else if let Some(ref dc) = pipe.deasc {
-                out.push_str(&dc.deasciify(raw_sent, dyn_opt, &mut pipe.scratch));
-            } else {
-                out.push_str(raw_sent);
-            }
-            cursor = sp.utf8_end;
-        }
-        out.push_str(&text[cursor..]);
         write_output_bytes(out.as_bytes())
     }
 }
@@ -1029,7 +1087,7 @@ pub extern "C" fn zmbk_deasciify(in_len: u32, mode: u32) -> i32 {
             Some(&pipe.dynamic_trie)
         };
 
-        let spans = TurkishSentenceExtractor::DEFAULT.extract_raw_spans(text);
+        let spans = TurkishSentenceExtractor::DEFAULT.from_paragraph_spans(text);
         if spans.is_empty() {
             return write_output_bytes(text.as_bytes());
         }

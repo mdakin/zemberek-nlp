@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "minimum_chrome_version": "116",
   "name": "Zemberek Türkçe Yazım ve Düzeltme Asistanı",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Türkçe yazım denetimi, ek ayırma/birleştirme, deasciifier ve metin düzeltme asistanı.",
   "icons": {
     "16": "icons/icon-16.png",

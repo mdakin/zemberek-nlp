@@ -1493,6 +1493,276 @@ fn is_xiaomi_mi_product_context(toks: &[SpanToken], cur_idx: usize, next_idx: us
         && (next_tok.contains_digit() || is_xiaomi_mi_product_tail(&next_tok.lower))
 }
 
+fn is_non_sent_end_abbrev(s: &str) -> bool {
+    matches!(
+        s,
+        "vs"
+            | "vb"
+            | "mah"
+            | "cad"
+            | "sok"
+            | "sk"
+            | "apt"
+            | "no"
+            | "blv"
+            | "dr"
+            | "prof"
+            | "doç"
+            | "doc"
+            | "op"
+            | "uzm"
+            | "av"
+            | "arb"
+            | "hz"
+            | "bkz"
+            | "bknz"
+            | "yy"
+            | "kr"
+            | "tl"
+            | "dk"
+            | "sn"
+            | "st"
+            | "gr"
+            | "kg"
+            | "cm"
+            | "mm"
+            | "km"
+            | "lt"
+            | "ltd"
+            | "şti"
+            | "sti"
+            | "inc"
+            | "co"
+            | "mr"
+            | "mrs"
+            | "ms"
+            | "inş"
+            | "ins"
+            | "ör"
+            | "örn"
+            | "yak"
+            | "ort"
+            | "maks"
+            | "min"
+            | "tel"
+            | "faks"
+            | "fax"
+            | "cep"
+            | "www"
+            | "http"
+            | "https"
+            | "alb"
+            | "yb"
+            | "gn"
+            | "yd"
+            | "yrd"
+            | "ogr"
+            | "öğr"
+            | "gör"
+            | "gor"
+            | "arş"
+            | "ars"
+            | "vet"
+            | "ecz"
+            | "dt"
+            | "mim"
+            | "müh"
+            | "muh"
+    )
+}
+
+fn is_domain_or_file_ext(s: &str) -> bool {
+    matches!(
+        s,
+        "com"
+            | "net"
+            | "org"
+            | "tr"
+            | "gov"
+            | "edu"
+            | "io"
+            | "co"
+            | "uk"
+            | "de"
+            | "ru"
+            | "nl"
+            | "fr"
+            | "it"
+            | "info"
+            | "biz"
+            | "php"
+            | "html"
+            | "htm"
+            | "asp"
+            | "aspx"
+            | "jsp"
+            | "js"
+            | "css"
+            | "pdf"
+            | "jpg"
+            | "jpeg"
+            | "png"
+            | "gif"
+            | "mp3"
+            | "mp4"
+            | "exe"
+            | "zip"
+            | "rar"
+            | "txt"
+    )
+}
+
+fn is_quoted_detached_suffix(s: &str) -> bool {
+    matches!(
+        s,
+        "ler"
+            | "lar"
+            | "da"
+            | "de"
+            | "ta"
+            | "te"
+            | "dan"
+            | "den"
+            | "tan"
+            | "ten"
+            | "nin"
+            | "nın"
+            | "nun"
+            | "nün"
+            | "in"
+            | "ın"
+            | "un"
+            | "ün"
+            | "ye"
+            | "ya"
+            | "yi"
+            | "yı"
+            | "yu"
+            | "yü"
+            | "le"
+            | "la"
+            | "li"
+            | "lı"
+            | "lu"
+            | "lü"
+    )
+}
+
+#[inline]
+fn is_dot_or_ellipsis_surface(s: &str) -> bool {
+    matches!(s, "." | ".." | "..." | "…")
+}
+
+#[inline]
+fn is_closing_quote_or_bracket(s: &str) -> bool {
+    matches!(s, "\"" | "'" | "”" | "’" | ")" | "]")
+}
+
+#[inline]
+fn is_bmp_java_letter(c: char) -> bool {
+    let u = c as u32;
+    u <= 0xFFFF
+        && c.is_alphabetic()
+        && !matches!(
+            u,
+            0x0345
+                | 0x16EE..=0x16F0
+                | 0x2160..=0x2188
+                | 0x24B6..=0x24E9
+                | 0x3007
+                | 0x3021..=0x3029
+                | 0x3038..=0x303A
+        )
+}
+
+fn is_true_internal_sentence_boundary(tokens: &[SpanToken], i: usize) -> bool {
+    let n = tokens.len();
+    let s = tokens[i].surface.as_str();
+    if !matches!(s, "." | "!" | "?") || i == 0 {
+        return false;
+    }
+    if s == "." {
+        if is_dot_or_ellipsis_surface(&tokens[i - 1].surface)
+            || (i + 1 < n && is_dot_or_ellipsis_surface(&tokens[i + 1].surface))
+        {
+            return false;
+        }
+    } else if i + 1 < n {
+        let ns = tokens[i + 1].surface.as_str();
+        if ns == "!" || ns == "?" {
+            return false;
+        }
+    }
+
+    let prev = &tokens[i - 1];
+    if s == "." {
+        let ps = prev.surface.as_str();
+        let pl = prev.lower.as_str();
+        if matches!(
+            prev.token_type,
+            TokenType::Number
+                | TokenType::URL
+                | TokenType::Email
+                | TokenType::Mention
+                | TokenType::Date
+                | TokenType::Time
+                | TokenType::RomanNumeral
+        ) || prev.contains_digit()
+            || ps.contains('/')
+            || ps.contains(':')
+        {
+            return false;
+        }
+        if (u16_len(pl) == 1 && pl.chars().next().is_some_and(is_bmp_java_letter))
+            || is_non_sent_end_abbrev(pl)
+        {
+            return false;
+        }
+    }
+
+    let mut j = i + 1;
+    let mut had_quote = false;
+    while j < n && is_closing_quote_or_bracket(&tokens[j].surface) {
+        had_quote = true;
+        j += 1;
+    }
+    if j >= n {
+        return false;
+    }
+    let nxt = &tokens[j];
+    if nxt.is_immutable() || nxt.token_type == TokenType::Number || nxt.contains_digit() {
+        return false;
+    }
+    let nl = nxt.lower.as_str();
+    let has_alpha = nl
+        .encode_utf16()
+        .any(|u| char::from_u32(u as u32).is_some_and(is_bmp_java_letter));
+    if !has_alpha {
+        return false;
+    }
+    if s == "." && is_domain_or_file_ext(nl) {
+        return false;
+    }
+    if j + 2 < n
+        && tokens[j + 1].surface == "."
+        && is_domain_or_file_ext(&tokens[j + 2].lower)
+    {
+        return false;
+    }
+    if j + 1 < n
+        && matches!(
+            tokens[j + 1].token_type,
+            TokenType::Mention | TokenType::Email
+        )
+    {
+        return false;
+    }
+    if had_quote && is_quoted_detached_suffix(nl) {
+        return false;
+    }
+    true
+}
+
 fn compute_sentence_starts(
     tokens: &[SpanToken],
     starts_cap: bool,
@@ -1501,32 +1771,96 @@ fn compute_sentence_starts(
 ) -> Vec<bool> {
     let n = tokens.len();
     let mut out = vec![false; n];
+
+    let mut first_true_bound: Option<usize> = None;
+    for i in 0..n.saturating_sub(1) {
+        if tokens[i].token_type == TokenType::Punctuation
+            && is_true_internal_sentence_boundary(tokens, i)
+        {
+            first_true_bound = Some(i);
+            break;
+        }
+    }
+
     let mut pending_start = starts_cap;
+    if !pending_start {
+        if let Some(ftb) = first_true_bound {
+            if ftb > 0 {
+                let mut idx0 = 0usize;
+                while idx0 < ftb
+                    && matches!(
+                        tokens[idx0].token_type,
+                        TokenType::Mention | TokenType::Emoji | TokenType::Emoticon
+                    )
+                {
+                    idx0 += 1;
+                }
+                if idx0 < ftb {
+                    let first_tok = &tokens[idx0];
+                    if !first_tok.is_immutable()
+                        && first_tok.token_type != TokenType::Number
+                        && !first_tok.contains_digit()
+                    {
+                        pending_start = true;
+                    }
+                }
+            }
+        }
+    }
+
+    let mut after_true_end_punct = false;
     let mut after_end_punct = false;
     let mut soft_boundary = false;
 
     for (i, t) in tokens.iter().enumerate() {
         if t.token_type == TokenType::Punctuation {
             if is_hard_end_punct(&t.surface) {
-                after_end_punct = true;
+                if is_true_internal_sentence_boundary(tokens, i) {
+                    after_true_end_punct = true;
+                    after_end_punct = false;
+                } else {
+                    after_end_punct = true;
+                }
             } else if is_soft_boundary_punct(&t.surface) {
                 soft_boundary = true;
             }
             continue;
         }
         if matches!(t.token_type, TokenType::Emoji | TokenType::Emoticon) {
-            if !pending_start {
+            if !pending_start && !after_true_end_punct {
                 soft_boundary = true;
             }
             continue;
         }
         if t.is_immutable() {
+            if matches!(
+                t.token_type,
+                TokenType::URL
+                    | TokenType::Email
+                    | TokenType::Date
+                    | TokenType::Time
+                    | TokenType::PercentNumeral
+            ) {
+                pending_start = false;
+                after_true_end_punct = false;
+                after_end_punct = false;
+                soft_boundary = false;
+            }
+            continue;
+        }
+        if t.token_type == TokenType::Number || t.contains_digit() {
+            pending_start = false;
+            after_true_end_punct = false;
+            after_end_punct = false;
+            soft_boundary = false;
             continue;
         }
         let starts_upper = t.surface.chars().next().is_some_and(char::is_uppercase);
         if pending_start {
             out[i] = true;
             pending_start = false;
+        } else if after_true_end_punct {
+            out[i] = true;
         } else if after_end_punct {
             if sentence_all_caps || starts_upper {
                 out[i] = true;
@@ -1534,6 +1868,7 @@ fn compute_sentence_starts(
         } else if soft_boundary && !sentence_all_caps && !sentence_title_noisy && starts_upper {
             out[i] = true;
         }
+        after_true_end_punct = false;
         after_end_punct = false;
         soft_boundary = false;
     }

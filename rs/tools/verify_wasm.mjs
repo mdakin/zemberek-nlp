@@ -224,6 +224,17 @@ const emojiPara =
   const normOut = readOutStr(exports, exports.zmbk_normalize(writeInput(exports, noisy)));
   assert.equal(normOut, "Selam yarın ben de geleceğim kütüphaneye olur mu?");
 
+  const multiSent = "Slm bugun geliyomusun? yarin 14te gorusuruz.";
+  const multiSentOut = readOutStr(exports, exports.zmbk_normalize(writeInput(exports, multiSent)));
+  assert.equal(multiSentOut, "Selam bugün geliyor musun? Yarın 14'te görüşürüz.");
+
+  const lowerMulti = "urun harika. cok begendim.";
+  const lowerMultiOut = readOutStr(
+    exports,
+    exports.zmbk_normalize(writeInput(exports, lowerMulti))
+  );
+  assert.equal(lowerMultiOut, "Ürün harika. Çok beğendim.");
+
   const ascii = "Cocuklar kutuphanede calisiyor ve ruzgar sert esiyor.";
   const deascNone = readOutStr(exports, exports.zmbk_deasciify(writeInput(exports, ascii), 0));
   const deascDis = readOutStr(exports, exports.zmbk_deasciify(writeInput(exports, ascii), 1));

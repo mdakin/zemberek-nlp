@@ -833,7 +833,7 @@ async function runRealChromiumE2E() {
           const ed = document.getElementById("sp-editor");
           if (!ed) return null;
           const noWasmBadge = !document.body.textContent.includes("MiB") && !document.body.textContent.includes("Wasm");
-          ed.value = "Slm bugun kutuphaneye gidicem olurmu?";
+          ed.value = "Slm bugun geliyomusun? yarin 14te gorusuruz.";
           document.getElementById("sp-btn-normalize").click();
           await new Promise((r) => setTimeout(r, 180));
           if (!ed.value.includes("Selam")) return null;
@@ -857,7 +857,7 @@ async function runRealChromiumE2E() {
       );
     }, 10000);
     assert.equal(spResult.noWasmBadge, true, "Side panel must not show MiB / Wasm badge");
-    assert.equal(spResult.normVal, "Selam bugün kütüphaneye gideceğim olur mu?");
+    assert.equal(spResult.normVal, "Selam bugün geliyor musun? Yarın 14'te görüşürüz.");
     assert.equal(spResult.hasCopyAndClear, true, "Side panel has Copy and Clear icon buttons");
     assert.ok(
       spResult.overflowPx <= 0,
