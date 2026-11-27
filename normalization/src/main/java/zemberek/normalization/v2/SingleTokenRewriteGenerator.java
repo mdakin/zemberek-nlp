@@ -30,13 +30,6 @@ final class SingleTokenRewriteGenerator {
   private static final Set<String> UPPERCASE_UNITS =
       Set.of("gb", "mb", "kb", "tb", "tl", "usd", "eur", "mhz", "ghz", "hd", "fps");
 
-  private static final Set<String> REAL_AGENTIVE_CIM_WORDS =
-      Set.of(
-          "öğrencim", "takipçim", "izleyicim", "dinleyicim", "okuyucum", "yardımcım", "temsilcim",
-          "sunucum", "oyuncum", "yöneticim", "eğitimcim", "işçim", "bekçim", "aşçım", "avcım",
-          "yolcum", "komşum", "ciğim", "cığım", "cuğum", "cüğüm", "çiğim", "çığım", "çuğum",
-          "çüğüm");
-
   private static final String[] OOV_PROPER_INFLECT_SUFS = {
     "dayız", "deyiz", "tayız", "teyiz", "dayım", "deyim", "tayım", "teyim", "ndaki", "ndeki",
     "daki", "deki", "taki", "teki", "lılar", "liler", "lular", "lüler", "dır", "dir", "dur", "dür",
@@ -50,45 +43,6 @@ final class SingleTokenRewriteGenerator {
     "lı", "li", "lu", "lü", "lık", "lik", "luk", "lük", "lar", "ler", "ca", "ce", "ça", "çe",
     "cı", "ci", "cu", "cü", "çı", "çi", "çu", "çü", "gil", "cığ", "ciğ", "cuğ", "cüğ", "çığ",
     "çiğ", "çuğ", "çüğ", "cug", "cüg", "cım", "cim", "cum", "cüm"
-  };
-
-  private static final Map<String, String> HAPLOLOGY_STEMS =
-      Map.of(
-          "burda", "burada",
-          "orda", "orada",
-          "şurda", "şurada",
-          "nerde", "nerede",
-          "nerden", "nereden",
-          "burdan", "buradan",
-          "ordan", "oradan",
-          "şurdan", "şuradan");
-
-  private static final String[][] INTERNAL_PROG_PATTERNS = {
-    {"iyod", "iyord"},
-    {"ıyod", "ıyord"},
-    {"uyod", "uyord"},
-    {"üyod", "üyord"},
-    {"iod", "iyord"},
-    {"ıod", "ıyord"},
-    {"iyomuş", "iyormuş"},
-    {"ıyomuş", "ıyormuş"},
-    {"uyomuş", "uyormuş"},
-    {"üyomuş", "üyormuş"},
-    {"iyomus", "iyormuş"},
-    {"iomuş", "iyormuş"},
-    {"iomus", "iyormuş"},
-    {"iyosa", "iyorsa"},
-    {"ıyosa", "ıyorsa"},
-    {"uyosa", "uyorsa"},
-    {"üyosa", "üyorsa"}
-  };
-
-  private static final String[] NEG_OPT_ENDINGS = {
-    "miyim", "mıyım", "muyum", "müyüm", "miyiz", "mıyız", "muyuz", "müyüz"
-  };
-
-  private static final String[] HYPOCORISTIC_ENDINGS = {
-    "cım", "cim", "cum", "cüm", "çım", "çim", "çum", "çüm", "cm"
   };
 
   private final NormalizationKnowledge knowledge;
@@ -105,7 +59,7 @@ final class SingleTokenRewriteGenerator {
   }
 
   // =========================================================================
-  // Informal Suffix, Haplology & Colloquial Verb Rewrites
+  // Mined Productive Suffix Rewrites
   // =========================================================================
 
   void addSuffixAndHaplologyCandidates(SlotDraftBuilder slot) {
@@ -114,147 +68,7 @@ final class SingleTokenRewriteGenerator {
     if (low.length() < 4 || tok.containsDigit()) {
       return;
     }
-    addHaplologyCandidates(slot, low);
-    addForeignPhoneticAdaptation(slot, low);
-    addInternalProgressiveCandidate(slot, low);
-    addSoftGDroppedCandidate(slot, low);
-    addNegativeOptativeCandidates(slot, low);
-    addHypocoristicCandidate(slot, low);
     addMinedSuffixRuleCandidates(slot, low);
-  }
-
-  private void addHaplologyCandidates(SlotDraftBuilder slot, String low) {
-    for (Map.Entry<String, String> e : HAPLOLOGY_STEMS.entrySet()) {
-      String bad = e.getKey();
-      if (low.startsWith(bad) || slot.tok.ascii().startsWith(NormV2Types.toAscii(bad))) {
-        String realized = morph.realizeValidWordOrNull(e.getValue() + low.substring(bad.length()));
-        if (realized != null) {
-          slot.addTruecasedAutoCost(realized, NormV2Types.SRC_SUFFIX_RULE, 0.92f);
-        }
-      }
-    }
-  }
-
-  /** Adapts foreign {@code x -> ks} and {@code w -> v} ({@code "indexlenmesini" -> "indekslenmesini"}). */
-  private void addForeignPhoneticAdaptation(SlotDraftBuilder slot, String low) {
-    if (low.length() < 5
-        || (low.indexOf('x') < 0 && low.indexOf('w') < 0)
-        || isMidSentenceTitle(slot)) {
-      return;
-    }
-    String adapted = low.replace("x", "ks").replace("w", "v");
-    String realized = morph.realizeValidWordOrNull(adapted);
-    if (realized != null) {
-      slot.addTruecased(
-          realized,
-          NormV2Types.SRC_SUFFIX_RULE,
-          0.88f,
-          SpanCandidateGenerator.computeWeightedEditCost(low, realized),
-          SpanCandidateGenerator.countDiacriticDiffs(adapted, realized));
-    }
-  }
-
-  /** Restores dropped {@code r} in internal progressive + copula ({@code "geliyomuş" -> "geliyormuş"}). */
-  private void addInternalProgressiveCandidate(SlotDraftBuilder slot, String low) {
-    if (low.length() < 6 || low.indexOf('o') < 2) {
-      return;
-    }
-    String progCand = expandInternalInformalProgressive(low);
-    if (progCand == null) {
-      return;
-    }
-    String realized = morph.realizeValidWordOrNull(progCand);
-    if (realized != null && !LatticeMorphologySupport.stripsExplicitStemDiacritic(low, realized)) {
-      slot.addTruecased(
-          realized,
-          NormV2Types.SRC_SUFFIX_RULE | NormV2Types.SRC_INFORMAL_MORPH,
-          0.90f,
-          SpanCandidateGenerator.computeWeightedEditCost(low, realized),
-          SpanCandidateGenerator.countDiacriticDiffs(progCand, realized));
-    }
-  }
-
-  /** Restores spoken {@code ğ}-dropped double vowels ({@code "oynadıım" -> "oynadığım"}). */
-  private void addSoftGDroppedCandidate(SlotDraftBuilder slot, String low) {
-    if (low.length() < 5) {
-      return;
-    }
-    for (int k = 2; k + 2 < low.length(); k++) {
-      char v = low.charAt(k);
-      if (v == low.charAt(k + 1) && isHighTurkishVowel(v)) {
-        String gCand = low.substring(0, k + 1) + 'ğ' + low.substring(k + 1);
-        String realized = morph.realizeValidWordOrNull(gCand);
-        if (realized != null
-            && realized.indexOf('ğ') >= 0
-            && !LatticeMorphologySupport.stripsExplicitStemDiacritic(low, realized)) {
-          slot.addTruecased(
-              realized,
-              NormV2Types.SRC_SUFFIX_RULE | NormV2Types.SRC_INFORMAL_MORPH,
-              0.88f,
-              SpanCandidateGenerator.computeWeightedEditCost(low, realized),
-              SpanCandidateGenerator.countDiacriticDiffs(gCand, realized));
-        }
-        return;
-      }
-    }
-  }
-
-  /** Expands spoken 1sg/1pl negative optative & progressive ({@code "almiyim" -> "almayayım"}). */
-  private void addNegativeOptativeCandidates(SlotDraftBuilder slot, String low) {
-    if (low.length() < 6) {
-      return;
-    }
-    for (String ending : NEG_OPT_ENDINGS) {
-      if (!low.endsWith(ending)) {
-        continue;
-      }
-      String vStem = low.substring(0, low.length() - ending.length());
-      if (vStem.length() >= 2 && morph.isVerbRootCandidate(vStem)) {
-        String[] formalTails =
-            ending.endsWith("z")
-                ? new String[] {"mayalım", "meyelim"}
-                : new String[] {"mayayım", "meyeyim", "mıyorum", "miyorum", "muyorum", "müyorum"};
-        for (String ft : formalTails) {
-          String realized = morph.realizeValidWordOrNull(vStem + ft);
-          if (realized != null
-              && !LatticeMorphologySupport.stripsExplicitStemDiacritic(low, realized)) {
-            int stemCheckLen = Math.min(vStem.length(), realized.length());
-            slot.addTruecased(
-                realized,
-                NormV2Types.SRC_SUFFIX_RULE | NormV2Types.SRC_INFORMAL_MORPH,
-                ft.endsWith("yorum") ? 0.80f : 0.90f,
-                SpanCandidateGenerator.computeWeightedEditCost(low, realized),
-                SpanCandidateGenerator.countDiacriticDiffs(
-                    vStem, realized.substring(0, stemCheckLen)));
-          }
-        }
-      }
-      return;
-    }
-  }
-
-  /** Expands hypocoristic diminutives ({@code "annecim" -> "anneciğim"}). */
-  private void addHypocoristicCandidate(SlotDraftBuilder slot, String low) {
-    if (low.length() < 5) {
-      return;
-    }
-    String[] hypPair = expandHypocoristic(low);
-    if (hypPair == null) {
-      return;
-    }
-    String stem = hypPair[0];
-    String hyp = hypPair[1];
-    boolean forceTitle =
-        morph.isStrictProperOrAbbrOnly(stem) || knowledge.isKnownProperOrAcronymStem(stem);
-    String surf =
-        forceTitle && !slot.sentenceAllCaps ? NormV2Types.trCapitalize(hyp) : slot.truecase(hyp);
-    slot.addRule(
-        surf,
-        hyp,
-        NormV2Types.SRC_SUFFIX_RULE,
-        0.88f,
-        SpanCandidateGenerator.computeWeightedEditCost(low, hyp),
-        SpanCandidateGenerator.countDiacriticDiffs(low, hyp));
   }
 
   private void addMinedSuffixRuleCandidates(SlotDraftBuilder slot, String low) {
@@ -286,50 +100,6 @@ final class SingleTokenRewriteGenerator {
         }
       }
     }
-  }
-
-  private static String expandInternalInformalProgressive(String low) {
-    for (String[] p : INTERNAL_PROG_PATTERNS) {
-      int idx = low.lastIndexOf(p[0]);
-      if (idx >= 2) {
-        return low.substring(0, idx) + p[1] + low.substring(idx + p[0].length());
-      }
-    }
-    return null;
-  }
-
-  private String[] expandHypocoristic(String low) {
-    if (REAL_AGENTIVE_CIM_WORDS.contains(low)
-        || (knowledge.cleanLm != null && knowledge.cleanLm.unigramCount(low) >= 25)) {
-      return null;
-    }
-    for (String end : HYPOCORISTIC_ENDINGS) {
-      if (!low.endsWith(end) || low.length() - end.length() < 3) {
-        continue;
-      }
-      String rawStem = low.substring(0, low.length() - end.length());
-      String stem = morph.realizeValidWordOrNull(rawStem);
-      if (stem == null) {
-        stem = rawStem;
-      }
-      char lastV = LatticeMorphologySupport.lastTurkishVowel(stem);
-      if (lastV == 0) {
-        return null;
-      }
-      String cons =
-          TurkishAlphabet.INSTANCE.isVoicelessConsonant(stem.charAt(stem.length() - 1))
-              ? "ç"
-              : "c";
-      String suf =
-          switch (lastV) {
-            case 'e', 'i' -> cons + "iğim";
-            case 'ö', 'ü' -> cons + "üğüm";
-            case 'o', 'u' -> cons + "uğum";
-            default -> cons + "ığım";
-          };
-      return new String[] {stem, stem + suf};
-    }
-    return null;
   }
 
   // =========================================================================
@@ -823,10 +593,6 @@ final class SingleTokenRewriteGenerator {
 
   private static boolean isMidSentenceTitle(SlotDraftBuilder slot) {
     return !slot.sentenceAllCaps && !slot.capHere && slot.tok.shape() == CasingShape.TITLE;
-  }
-
-  private static boolean isHighTurkishVowel(char v) {
-    return v == 'ı' || v == 'i' || v == 'u' || v == 'ü';
   }
 
   static String buildOrdinalInflected(String digits, String suf) {

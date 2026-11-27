@@ -73,29 +73,6 @@ final class SplitMergeSpanGenerator {
     "ü"
   };
 
-  private static final String[] SEY_PREFIXES = {
-    "hiçbirşey", "hicbirsey", "hiçbişey", "hicbisey",
-    "herşey", "hersey",
-    "birşey", "birsey", "bişey", "bisey", "bişi", "bisi"
-  };
-
-  private static final String[] BIR_YER_DAHA_PREFIXES = {
-    "biryer", "biyer", "bıyer", "birdaha", "bidaha", "bıdaha"
-  };
-
-  private static final Set<String> QUANTIFIED_COUNT_NOUNS =
-      Set.of("gün", "ay", "yıl", "kez", "kere", "defa");
-
-  private static final Set<String> COUNT_MODIFIERS =
-      Set.of(
-          "bir", "iki", "üç", "dört", "beş", "altı", "yedi", "sekiz", "dokuz", "on", "kaç",
-          "birkaç");
-
-  private static final Set<String> PARTICIPLE_SUFFIXES =
-      Set.of(
-          "dığı", "diği", "duğu", "düğü", "tığı", "tiği", "tuğu", "tüğü", "dığımız", "diğimiz",
-          "tiğimiz", "tığımız");
-
   private record SplitHead(String customSurface, String normLower, boolean isProper) {}
 
   private record StemClassification(boolean isKnownAcronym, boolean isProperOrAcronym) {}
@@ -215,13 +192,10 @@ final class SplitMergeSpanGenerator {
       return;
     }
 
-    addCamelCaseRunOnSplit(slot);
-
     boolean hasValidSingleWord = strictKnown || slot.hasValidSingleWordDraft();
     addLocativeCliticSplits(slot, hasValidSingleWord);
     addQuestionCliticSplits(slot);
     addConjunctionKiSplits(slot);
-    addEncliticYaSplit(slot, strictKnown);
     addFixedPrefixSplits(slot, strictKnown);
     addCleanBigramCompoundSplits(slot, strictKnown);
     addGluedTwoWordSplit(slot, strictKnown);
@@ -273,55 +247,6 @@ final class SplitMergeSpanGenerator {
     return tailLow.length() == 4
         && (tailLow.endsWith("de") || tailLow.endsWith("da"))
         && LOCATIVE_CLITIC_TAILS.contains(tailLow.substring(0, 2));
-  }
-
-  /** Splits glued CamelCase words like {@code "DindarıSolcusu" -> "Dindarı Solcusu"}. */
-  private void addCamelCaseRunOnSplit(SlotDraftBuilder slot) {
-    SpanToken tok = slot.tok;
-    String low = tok.lower();
-    int len = low.length();
-    if (tok.shape() != CasingShape.MIXED
-        || len < 6
-        || len > 24
-        || knowledge.isKnownBrandMixedCase(low)) {
-      return;
-    }
-    int camelCut = findSingleCamelBoundary(tok.surface());
-    if (camelCut < 3 || camelCut > len - 3) {
-      return;
-    }
-    String rawW1 = low.substring(0, camelCut);
-    String rawW2 = low.substring(camelCut);
-    String realW1 = realizeValidOrAttestedStem(rawW1);
-    String realW2 = realizeValidOrAttestedStem(rawW2);
-    if (realW1 == null
-        || realW2 == null
-        || LatticeMorphologySupport.stripsExplicitStemDiacritic(rawW1, realW1)
-        || LatticeMorphologySupport.stripsExplicitStemDiacritic(rawW2, realW2)) {
-      return;
-    }
-    String surfW1 =
-        Character.isUpperCase(tok.surface().charAt(0))
-            ? NormV2Types.trCapitalize(realW1)
-            : realW1;
-    String surfW2 =
-        knowledge.truecase(
-            realW2,
-            CasingShape.TITLE,
-            tok.surface().substring(camelCut),
-            false,
-            slot.sentenceAllCaps,
-            morph.strictMorphology);
-    int diacDiffs =
-        SpanCandidateGenerator.countDiacriticDiffs(rawW1, realW1)
-            + SpanCandidateGenerator.countDiacriticDiffs(rawW2, realW2);
-    slot.addRule(
-        surfW1 + " " + surfW2,
-        realW1 + " " + realW2,
-        NormV2Types.SRC_CLITIC_SPLIT,
-        0.90f,
-        0.18f,
-        diacDiffs);
   }
 
   /** Splits glued {@code de/da} clitics ({@code "bende" -> "ben de"}). */
@@ -424,100 +349,14 @@ final class SplitMergeSpanGenerator {
     }
   }
 
-  /** Splits finite-verb + enclitic {@code ya} ({@code "uzaklasiyoruzya" -> "uzaklaşıyoruz ya"}). */
-  private void addEncliticYaSplit(SlotDraftBuilder slot, boolean strictKnown) {
-    SpanToken tok = slot.tok;
-    String low = tok.lower();
-    if (strictKnown || low.length() < 5 || !low.endsWith("ya")) {
-      return;
-    }
-    String rawHead = low.substring(0, low.length() - 2);
-    String queryHead = queryForAsciiUpperI(tok, rawHead);
-    String headReal = morph.realizeValidWordOrNull(queryHead);
-    if (headReal == null
-        || LatticeMorphologySupport.stripsExplicitStemDiacritic(rawHead, headReal)
-        || morph.summarizeMorph(headReal).syntaxClass()
-            != NormV2Types.HEAD_SYNTAX_FINITE_OR_CONVERB) {
-      return;
-    }
-    int dDiffs = SpanCandidateGenerator.countDiacriticDiffs(rawHead, headReal);
-    slot.addTruecased(
-        headReal + " ya",
-        NormV2Types.SRC_CLITIC_SPLIT | (dDiffs > 0 ? NormV2Types.SRC_DEASCIIFIER : 0),
-        0.88f,
-        0.20f,
-        dDiffs);
-  }
-
-  /** Handles {@code bir/her/hiçbir şey*}, {@code bir yer/daha*}, {@code nap/nol*}, and {@code kimo}. */
+  /** Handles productive spoken contractions {@code nap* -> ne yap*} and {@code nol* -> ne ol*}. */
   private void addFixedPrefixSplits(SlotDraftBuilder slot, boolean strictKnown) {
     if (strictKnown) {
       return;
     }
     String low = slot.tok.lower();
     if (low.length() >= 5) {
-      addSeyPrefixSplit(slot, low);
-      addBirYerDahaSplit(slot, low);
       addNeYapOlSplit(slot, low);
-    }
-    if (low.equals("acabao") || low.equals("kimo") || low.equals("nediro")) {
-      slot.addTruecased(
-          low.substring(0, low.length() - 1) + " o",
-          NormV2Types.SRC_CLITIC_SPLIT,
-          0.92f,
-          0.18f,
-          0);
-    }
-  }
-
-  private void addSeyPrefixSplit(SlotDraftBuilder slot, String low) {
-    for (String pref : SEY_PREFIXES) {
-      if (!low.startsWith(pref)) {
-        continue;
-      }
-      String tail = low.substring(pref.length());
-      if ((pref.equals("bişi") || pref.equals("bisi")) && tail.isEmpty()) {
-        continue;
-      }
-      String seyReal = tail.isEmpty() ? "şey" : morph.realizeValidWordOrNull("şey" + tail);
-      if (seyReal != null && seyReal.startsWith("şey")) {
-        String det = determinerForSeyPrefix(pref);
-        slot.addTruecased(
-            det + " " + seyReal,
-            NormV2Types.SRC_CLITIC_SPLIT,
-            0.90f,
-            0.22f,
-            SpanCandidateGenerator.countDiacriticDiffs("şey" + tail, seyReal));
-        return;
-      }
-    }
-  }
-
-  private static String determinerForSeyPrefix(String prefix) {
-    if (prefix.startsWith("hiç") || prefix.startsWith("hic")) {
-      return "hiçbir";
-    }
-    return prefix.startsWith("her") ? "her" : "bir";
-  }
-
-  private void addBirYerDahaSplit(SlotDraftBuilder slot, String low) {
-    for (String bp : BIR_YER_DAHA_PREFIXES) {
-      if (!low.startsWith(bp)) {
-        continue;
-      }
-      String baseHead = bp.endsWith("yer") ? "yer" : "daha";
-      String tail = low.substring(bp.length());
-      String secondReal =
-          tail.isEmpty() ? baseHead : morph.realizeValidWordOrNull(baseHead + tail);
-      if (secondReal != null && secondReal.startsWith(baseHead)) {
-        slot.addTruecased(
-            "bir " + secondReal,
-            NormV2Types.SRC_CLITIC_SPLIT,
-            0.88f,
-            0.22f,
-            SpanCandidateGenerator.countDiacriticDiffs(baseHead + tail, secondReal));
-        return;
-      }
     }
   }
 
@@ -735,7 +574,7 @@ final class SplitMergeSpanGenerator {
   private boolean isAttestedFallbackHead(String queryHead) {
     return queryHead.length() >= 3
         && ((knowledge.cleanLm != null && knowledge.cleanLm.unigramCount(queryHead) >= 4)
-            || lmVocab.contains(queryHead)
+            || (lmVocab != null && lmVocab.contains(queryHead))
             || knowledge.isKnownProperOrAcronymStem(queryHead));
   }
 
@@ -771,7 +610,7 @@ final class SplitMergeSpanGenerator {
     }
     if (rawHead.length() >= 3
         && ((knowledge.cleanLm != null && knowledge.cleanLm.unigramCount(rawHead) >= 4)
-            || lmVocab.contains(rawHead))) {
+            || (lmVocab != null && lmVocab.contains(rawHead)))) {
       return rawHead;
     }
     return null;
@@ -803,14 +642,12 @@ final class SplitMergeSpanGenerator {
     SpanToken t1 = tokens.get(i);
     SpanToken t2 = tokens.get(i + 1);
     boolean orphansAdjacentThird = isOrphaningAdjacentThirdToken(tokens, i);
-    boolean syntacticallyBlocked =
-        isSyntacticallyBlockedMerge(tokens, i, t1.lower(), t2.lower());
 
-    if (!orphansAdjacentThird && !syntacticallyBlocked) {
+    if (!orphansAdjacentThird) {
       addTwoTokenParallelMerges(ctx, t1, t2);
     }
     addDetachedNumeralTwoTokenMerge(ctx, t1, t2);
-    addDetachedWordTwoTokenMerges(ctx, t1, t2, syntacticallyBlocked);
+    addDetachedWordTwoTokenMerges(ctx, t1, t2);
   }
 
   private void addThreeTokenMerges(MergeContext ctx) {
@@ -968,8 +805,7 @@ final class SplitMergeSpanGenerator {
     }
   }
 
-  private void addDetachedWordTwoTokenMerges(
-      MergeContext ctx, SpanToken t1, SpanToken t2, boolean syntacticallyBlocked) {
+  private void addDetachedWordTwoTokenMerges(MergeContext ctx, SpanToken t1, SpanToken t2) {
     if (t1.isImmutable()
         || t2.isImmutable()
         || t2.adjacentToPrev()
@@ -989,7 +825,7 @@ final class SplitMergeSpanGenerator {
       addDetachedRelativizerKiMerge(ctx, t1, t2Low);
     }
     if (!isLocOrAbl && !t2Low.equals("ki") && !t2Low.equals("kü")) {
-      addClosedCompoundOrCopulaMerge(ctx, t1, t2, syntacticallyBlocked);
+      addClosedCompoundOrCopulaMerge(ctx, t1, t2);
       addDetachedProperSuffixMerge(ctx, t1, t2Low, stemInfo);
     }
   }
@@ -1074,11 +910,7 @@ final class SplitMergeSpanGenerator {
     }
   }
 
-  private void addClosedCompoundOrCopulaMerge(
-      MergeContext ctx, SpanToken t1, SpanToken t2, boolean syntacticallyBlocked) {
-    if (syntacticallyBlocked) {
-      return;
-    }
+  private void addClosedCompoundOrCopulaMerge(MergeContext ctx, SpanToken t1, SpanToken t2) {
     String t2Low = t2.lower();
     String concatRaw = t1.lower() + t2Low;
     String realized = morph.realizeValidWordOrNull(concatRaw);
@@ -1203,29 +1035,6 @@ final class SplitMergeSpanGenerator {
     return false;
   }
 
-  private static boolean isSyntacticallyBlockedMerge(
-      List<SpanToken> tokens, int i, String t1Low, String t2Low) {
-    if (i <= 0) {
-      return false;
-    }
-    SpanToken prev = tokens.get(i - 1);
-    String prevLow = prev.lower();
-    if (QUANTIFIED_COUNT_NOUNS.contains(t1Low)
-        && (prev.type() == Token.Type.Number || COUNT_MODIFIERS.contains(prevLow))) {
-      return true;
-    }
-    if (t1Low.equals("bu") && t2Low.startsWith("gün") && prevLow.length() >= 5) {
-      for (String suf : PARTICIPLE_SUFFIXES) {
-        if (prevLow.endsWith(suf)) {
-          return true;
-        }
-      }
-    }
-    return (t1Low.equals("de") || t1Low.equals("da"))
-        && t1Low.equals(t2Low)
-        && (prevLow.endsWith("mak") || prevLow.endsWith("mek"));
-  }
-
   static String harmonizeQuestionClitic(String rawQt, char stemVowel) {
     char hv =
         switch (stemVowel) {
@@ -1250,24 +1059,6 @@ final class SplitMergeSpanGenerator {
       case "miymis", "muymus" -> "m" + hv + "ym" + hv + "ş";
       default -> rawQt;
     };
-  }
-
-  private static int findSingleCamelBoundary(String surface) {
-    int cut = -1;
-    for (int i = 1; i < surface.length(); i++) {
-      char prev = surface.charAt(i - 1);
-      char cur = surface.charAt(i);
-      if (!Character.isLetter(cur)) {
-        return -1;
-      }
-      if (Character.isUpperCase(cur)) {
-        if (!Character.isLowerCase(prev) || cut != -1) {
-          return -1;
-        }
-        cut = i;
-      }
-    }
-    return cut;
   }
 
   private static boolean isNumericSurface(String s) {
