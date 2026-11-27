@@ -1,13 +1,13 @@
-# Zemberek Türkçe Yazım ve Düzeltme Asistanı (Chrome MV3 v0.2.4) — Kurulum, Test ve Davranış Rehberi
+# Zemberek Türkçe Yazım ve Düzeltme Asistanı (Chrome MV3 v0.2.5) — Kurulum, Test ve Davranış Rehberi
 
-Bu klasördeki **`zemberek-chrome-extension-v0.2.4.zip`** paketi, Zemberek'in Rust + WebAssembly motorunu (Morfoloji, Bağlamsal Normalizer, Lattice Deasciifier, Sözdizimsel Belirsizlik Giderici ve Yazım Denetleyicisi) doğrudan Chrome içinde **%100 çevrimdışı** çalıştıran eklentinin kurulabilir sürümüdür.
+Bu klasördeki **`zemberek-chrome-extension-v0.2.5.zip`** paketi, Zemberek'in Rust + WebAssembly motorunu (Morfoloji, Bağlamsal Normalizer, Lattice Deasciifier, Sözdizimsel Belirsizlik Giderici ve Yazım Denetleyicisi) doğrudan Chrome içinde **%100 çevrimdışı** çalıştıran eklentinin kurulabilir sürümüdür.
 
 ---
 
 ## 1. Hızlı Kurulum (1 Dakika — Windows / macOS / Linux)
 
-1. **`zemberek-chrome-extension-v0.2.4.zip`** dosyasını bilgisayarınıza indirin ve bir klasöre çıkartın (ör. masaüstünde veya İndirilenler'de `zemberek-chrome-extension-v0.2.4` klasörü oluşacak şekilde; klasörün içinde doğrudan `manifest.json` görünmelidir).
-   - *Linux / macOS terminal için:* `unzip zemberek-chrome-extension-v0.2.4.zip -d zemberek-chrome-extension`
+1. **`zemberek-chrome-extension-v0.2.5.zip`** dosyasını bilgisayarınıza indirin ve bir klasöre çıkartın (ör. masaüstünde veya İndirilenler'de `zemberek-chrome-extension-v0.2.5` klasörü oluşacak şekilde; klasörün içinde doğrudan `manifest.json` görünmelidir).
+   - *Linux / macOS terminal için:* `unzip zemberek-chrome-extension-v0.2.5.zip -d zemberek-chrome-extension`
 2. Google Chrome adres çubuğuna **`chrome://extensions`** yazıp Enter'a basın.
 3. Sağ üst köşedeki **Geliştirici modu (Developer mode)** anahtarını **AÇIK** konuma getirin.
 4. Sol üstte beliren **Paketlenmemiş öğe yükle (Load unpacked)** düğmesine tıklayın ve çıkarttığınız klasörü seçin.

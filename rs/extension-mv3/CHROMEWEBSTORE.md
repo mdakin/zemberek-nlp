@@ -72,6 +72,7 @@ Turkish
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
+| 0.2.5 | 2026-11-27 | Upgraded Studio & Core Lite `.zmbk` models to 3.0M curated (`75/25` formal/conversational) `CleanWordLm` + `0.20.1` lexicon + `85K` `No-SmoothLm` Perceptron (`+0.66..+1.00 pp` `W-ERR` across unseen benchmarks, `0` corpus typo noise on `konrol`). | Draft |
 | 0.2.4 | 2026-11-27 | Added residual spellcheck fallback in Studio mode so unattested-bigram edit-distance-1 typos (e.g. `konrol -> kontrol`, `kitablar -> kitaplar`) are caught in both in-page checking and `Düzelt` normalization, with lowercase casing tie-breaking. | Draft |
 | 0.2.2 | 2026-11-27 | Updated extension toolbar, store, and UI branding to the official Zemberek spiral mainspring SVG/PNG icon set (16/32/48/128px). | Draft |
 | 0.2.1 | 2026-11-27 | Fixed BFCache port disconnect runtime.lastError in offscreen worker, eliminated extra scrollbar on 100vh pages and Side Panel, and enforced strict `connect-src 'self'` local-only CSP. | Draft |

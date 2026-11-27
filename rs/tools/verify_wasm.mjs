@@ -148,17 +148,17 @@ if (fs.existsSync(step0ZmbkPath) && fs.existsSync(step0TsvPath)) {
   }
 }
 
-// 3. Core Lite pack verification (<= 4.5 MiB Wasm linear memory gate!)
+// 3. Core Lite pack verification (<= 4.8 MiB Wasm linear memory gate with 3.0M CleanWordLm!)
 const liteBytes = fs.readFileSync(liteZmbkPath);
 const liteInitMs = await streamIntoWasm(exports, liteBytes, 0);
 const liteBootMemoryBytes = exports.memory.buffer.byteLength;
 assert.ok(
-  liteBootMemoryBytes <= 4.5 * 1024 * 1024,
-  `Core Lite initial Wasm memory (${(liteBootMemoryBytes / (1024 * 1024)).toFixed(2)} MiB) exceeded 4.5 MiB gate!`
+  liteBootMemoryBytes <= 4.8 * 1024 * 1024,
+  `Core Lite initial Wasm memory (${(liteBootMemoryBytes / (1024 * 1024)).toFixed(2)} MiB) exceeded 4.8 MiB gate!`
 );
 assert.equal(exports.zmbk_capabilities() & 0b11, 0b11, "Core Lite must expose MORPH + SPELL");
 
-// Verify clean paragraph check in Core Lite stays <= 4.5 MiB
+// Verify clean paragraph check in Core Lite stays <= 4.8 MiB
 const cleanPara =
   "Türkiye Cumhuriyeti Merkez Bankası bugün yeni faiz kararını kamuoyuna resmen açıkladı ve piyasalar olumlu tepki verdi.";
 {
@@ -169,8 +169,8 @@ const cleanPara =
 }
 const liteCleanMemoryBytes = exports.memory.buffer.byteLength;
 assert.ok(
-  liteCleanMemoryBytes <= 4.5 * 1024 * 1024,
-  `Core Lite steady clean-check Wasm memory (${(liteCleanMemoryBytes / (1024 * 1024)).toFixed(2)} MiB) exceeded 4.5 MiB gate!`
+  liteCleanMemoryBytes <= 4.8 * 1024 * 1024,
+  `Core Lite steady clean-check Wasm memory (${(liteCleanMemoryBytes / (1024 * 1024)).toFixed(2)} MiB) exceeded 4.8 MiB gate!`
 );
 
 // Also verify typo suggestion in Core Lite

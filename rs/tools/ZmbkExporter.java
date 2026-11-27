@@ -1556,8 +1556,17 @@ public class ZmbkExporter {
 
     // 13. Export `SmoothLm`-free `NormalizationKnowledge` (`SECT_NORM_KNOWLEDGE = 10`) & `SpanLatticePerceptronNormalizer` (`SECT_NORM_PERCEPTRON = 11`)
     TurkishMorphology strictNormMorph = TurkishMorphology.createWithDefaults();
-    SpanLatticePerceptronNormalizer normNoSmooth =
-        SpanLatticePerceptronNormalizer.createWithoutSmoothLm(strictNormMorph);
+    String customNoSmoothPerc = System.getProperty("zmbk.noSmoothPerceptron", "").trim();
+    SpanLatticePerceptronNormalizer normNoSmooth;
+    if (!customNoSmoothPerc.isEmpty()) {
+      SpanLatticePerceptronNormalizer tmp =
+          SpanLatticePerceptronNormalizer.createWithoutSmoothLm(strictNormMorph);
+      normNoSmooth =
+          SpanLatticePerceptronNormalizer.loadModel(Paths.get(customNoSmoothPerc), tmp.generator());
+      System.out.println("Loaded dedicated No-SmoothLm Perceptron from " + customNoSmoothPerc);
+    } else {
+      normNoSmooth = SpanLatticePerceptronNormalizer.createWithoutSmoothLm(strictNormMorph);
+    }
     byte[] normKnowBytes = buildNormKnowledgeSection(normKnowledge, normNoSmooth);
     byte[] normPercBytes = buildNormPerceptronSection(normNoSmooth);
 
