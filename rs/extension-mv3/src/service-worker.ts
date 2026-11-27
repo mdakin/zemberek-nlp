@@ -68,21 +68,33 @@ async function ensureOffscreenReady(): Promise<void> {
 
 async function setupContextMenus(): Promise<void> {
   await chrome.contextMenus.removeAll();
-  chrome.contextMenus.create({
-    id: MENU_NORMALIZE,
-    title: "Zemberek ile Düzelt (Normalize)",
-    contexts: ["selection"],
-  });
-  chrome.contextMenus.create({
-    id: MENU_DEASCIIFY,
-    title: "Türkçe Karakterleri Tamamla (Deasciify)",
-    contexts: ["selection"],
-  });
-  chrome.contextMenus.create({
-    id: MENU_OPEN_SIDEPANEL,
-    title: "Zemberek Yan Panelini Aç",
-    contexts: ["page", "editable"],
-  });
+  const ignoreLastErr = () => {
+    void chrome.runtime.lastError;
+  };
+  chrome.contextMenus.create(
+    {
+      id: MENU_NORMALIZE,
+      title: "Zemberek ile Düzelt (Normalize)",
+      contexts: ["selection"],
+    },
+    ignoreLastErr
+  );
+  chrome.contextMenus.create(
+    {
+      id: MENU_DEASCIIFY,
+      title: "Türkçe Karakterleri Tamamla (Deasciify)",
+      contexts: ["selection"],
+    },
+    ignoreLastErr
+  );
+  chrome.contextMenus.create(
+    {
+      id: MENU_OPEN_SIDEPANEL,
+      title: "Zemberek Yan Panelini Aç",
+      contexts: ["page", "editable"],
+    },
+    ignoreLastErr
+  );
 }
 
 // ============================================================================

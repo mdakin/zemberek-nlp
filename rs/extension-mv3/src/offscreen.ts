@@ -87,6 +87,8 @@ chrome.runtime.onConnect.addListener((port) => {
   });
 
   port.onDisconnect.addListener(() => {
+    // Consume `chrome.runtime.lastError` set by Chrome 123+ when a tab enters Back/Forward Cache
+    void chrome.runtime.lastError;
     activePorts.delete(portId);
   });
 });

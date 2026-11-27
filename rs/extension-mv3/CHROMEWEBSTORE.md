@@ -72,5 +72,6 @@ Turkish
 
 | Version | Date | Changes | Status |
 |---------|------|---------|--------|
+| 0.2.1 | 2026-11-27 | Fixed BFCache port disconnect runtime.lastError in offscreen worker, eliminated extra scrollbar on 100vh pages and Side Panel, and enforced strict `connect-src 'self'` local-only CSP. | Draft |
 | 0.2.0 | 2026-11-27 | Streamlined Popup & Side Panel UI with icon actions, moved engine/circumflex controls to Extension Options, fixed Side Panel morphological analysis wrapping, suppressed overlapping native Chrome spellcheck squiggles on Turkish fields, and added automatic non-Turkish text gating. | Draft |
 | 0.1.0 | 2026-11-27 | Initial Manifest V3 release with on-device Rust/Wasm Turkish morphology, spellchecker, lattice deasciifier, contextual normalizer, non-destructive CSS Custom Highlights, textarea mirror overlay, and Side Panel Writing Studio. | Draft |

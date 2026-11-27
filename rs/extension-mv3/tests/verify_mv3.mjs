@@ -341,6 +341,12 @@ async function runRealChromiumE2E() {
       if (ev.method === "Runtime.exceptionThrown") {
         consoleErrors.push(JSON.stringify(ev.params.exceptionDetails));
       }
+      if (
+        ev.method === "Log.entryAdded" &&
+        String(ev.params?.entry?.text || "").includes("Unchecked runtime.lastError")
+      ) {
+        consoleErrors.push(`lastError: ${ev.params.entry.text}`);
+      }
     });
 
     // 1. Discover our MV3 Service Worker target & verify Extension ID
@@ -783,6 +789,27 @@ async function runRealChromiumE2E() {
       spSession
     );
 
+    // Verify Side Panel has ZERO vertical scrollbar when initial content fits the window!
+    const spInitialScroll = await waitForCondition(async () => {
+      return evalInSession(
+        cdp,
+        spSession,
+        `(() => {
+          const ed = document.getElementById("sp-editor");
+          if (!ed) return null;
+          ed.value = "";
+          return {
+            scrollHeight: document.documentElement.scrollHeight,
+            clientHeight: document.documentElement.clientHeight,
+          };
+        })()`
+      );
+    }, 5000);
+    assert.ok(
+      spInitialScroll.scrollHeight <= spInitialScroll.clientHeight,
+      `Side panel created unnecessary vertical scrollbar on open: scrollHeight=${spInitialScroll.scrollHeight} > clientHeight=${spInitialScroll.clientHeight}`
+    );
+
     const spResult = await waitForCondition(async () => {
       return evalInSession(
         cdp,
@@ -858,6 +885,25 @@ async function runRealChromiumE2E() {
       multiTabStats.activePortCount >= 10,
       `Expected >= 10 active tab ports multiplexed to singleton Worker, got ${multiTabStats.activePortCount}`
     );
+
+    // Attach to Offscreen Document Log stream and navigate a connected tab to trigger BFCache port closure;
+    // verify ZERO "Unchecked runtime.lastError" entries are logged!
+    const { targetInfos: allTargetsNow } = await cdp.send("Target.getTargets");
+    const offscreenTarget = allTargetsNow.find((t) => t.url.endsWith("/offscreen.html"));
+    if (offscreenTarget) {
+      const { sessionId: offSession } = await cdp.send("Target.attachToTarget", {
+        targetId: offscreenTarget.targetId,
+        flatten: true,
+      });
+      await cdp.send("Log.enable", {}, offSession);
+      await cdp.send("Runtime.enable", {}, offSession);
+    }
+    const { sessionId: bfTabSession } = await cdp.send("Target.attachToTarget", {
+      targetId: extraTabTargets[0],
+      flatten: true,
+    });
+    await cdp.send("Page.navigate", { url: "about:blank" }, bfTabSession);
+    await new Promise((r) => setTimeout(r, 250));
 
     // Measure warm paragraph Port IPC round-trip latency directly from Tab 1 content-script world (`< 1.5 ms` gate!)
     const warmPortRttMs = await evalInSession(

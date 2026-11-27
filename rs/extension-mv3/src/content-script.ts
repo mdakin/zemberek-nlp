@@ -179,6 +179,15 @@ let activeCardContext: {
 const SHADOW_UI_CSS = `
 :host {
   all: initial;
+  position: fixed !important;
+  inset: 0 auto auto 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  overflow: visible !important;
+  pointer-events: none !important;
   color-scheme: light dark;
   --zmbk-bg-light: #ffffff;
   --zmbk-bg-dark: #18181b;
@@ -238,6 +247,7 @@ const SHADOW_UI_CSS = `
 .zmbk-card {
   position: fixed;
   z-index: 2147483646;
+  pointer-events: auto;
   min-width: 240px;
   max-width: 340px;
   background: var(--zmbk-bg);
@@ -376,6 +386,7 @@ const SHADOW_UI_CSS = `
   margin: 0;
   inset: auto;
   position: relative;
+  pointer-events: auto;
   border: 1px solid var(--zmbk-border);
   border-left: 4px solid var(--zmbk-accent);
   background: var(--zmbk-bg);
@@ -413,10 +424,13 @@ const SHADOW_UI_CSS = `
 const MIRROR_OVERLAY_CSS = `
 :host {
   all: initial;
-  position: fixed;
-  pointer-events: none;
-  z-index: 2147483640;
-  overflow: hidden;
+  position: fixed !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  pointer-events: none !important;
+  z-index: 2147483640 !important;
+  overflow: hidden !important;
   contain: layout style paint;
 }
 .zmbk-mirror-surface {
@@ -454,6 +468,8 @@ function ensureShadowUi(): void {
   uiHost = document.createElement("div");
   uiHost.id = "zmbk-assistant-root";
   uiHost.setAttribute("data-zmbk-ui", "1");
+  uiHost.style.cssText =
+    "position:fixed!important;inset:0 auto auto 0!important;width:0!important;height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:visible!important;pointer-events:none!important;";
   uiShadow = uiHost.attachShadow({ mode: "open" });
 
   const style = document.createElement("style");
@@ -563,6 +579,7 @@ async function getOrConnectPort(): Promise<chrome.runtime.Port | null> {
       const connected = chrome.runtime.connect({ name: CHECK_PORT_NAME });
       connected.onMessage.addListener(handlePortMessage);
       connected.onDisconnect.addListener(() => {
+        void chrome.runtime.lastError;
         if (port === connected) {
           port = null;
         }
@@ -721,6 +738,8 @@ function ensureTextareaMirror(ed: TrackedEditor): void {
   if (ed.mirrorHost && ed.mirrorContent) return;
   const host = document.createElement("div");
   host.setAttribute("data-zmbk-mirror", "1");
+  host.style.cssText =
+    "position:fixed!important;margin:0!important;padding:0!important;border:0!important;pointer-events:none!important;overflow:hidden!important;z-index:2147483640!important;";
   const shadow = host.attachShadow({ mode: "open" });
   const style = document.createElement("style");
   style.textContent = MIRROR_OVERLAY_CSS;
@@ -1525,6 +1544,28 @@ window.addEventListener("scroll", () => scheduleHighlightFlush(), {
 });
 window.addEventListener("resize", () => scheduleHighlightFlush(), {
   passive: true,
+});
+
+// Proactively disconnect port before entering BFCache so Chrome never raises a forced-close error,
+// and seamlessly re-validate tracked editors if the page is restored from BFCache.
+window.addEventListener("pagehide", () => {
+  if (port) {
+    try {
+      port.disconnect();
+    } catch {
+      // Ignore already-closed channel
+    }
+    port = null;
+  }
+});
+
+window.addEventListener("pageshow", (ev) => {
+  if (ev.persisted) {
+    for (const ed of trackedEditors.values()) {
+      ed.lastHash = 0;
+      scheduleEditorCheck(ed, true);
+    }
+  }
 });
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {

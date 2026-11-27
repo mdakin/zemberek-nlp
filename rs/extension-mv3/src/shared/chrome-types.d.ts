@@ -23,6 +23,7 @@ declare namespace chrome {
       url?: string;
       id?: string;
     }
+    const lastError: { message?: string } | undefined;
     function getURL(path: string): string;
     function getContexts(filter: { contextTypes?: ContextType[] }): Promise<ExtensionContext[]>;
     function sendMessage<T = any>(message: unknown): Promise<T>;
