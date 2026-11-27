@@ -1,0 +1,29 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/zemberek-pack",
+    "crates/zemberek-core",
+    "crates/zemberek-tok",
+    "crates/zemberek-morph",
+    "crates/zemberek-disambig",
+    "crates/zemberek-spell",
+    "crates/zemberek-deasc",
+    "crates/zemberek-norm",
+    "crates/zemberek-wasm",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+
+[profile.release]
+opt-level = 2
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
+
+[profile.wasm-release]
+inherits = "release"
+opt-level = 3

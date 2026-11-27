@@ -1,0 +1,19 @@
+[package]
+name = "zemberek-wasm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "WebAssembly zero-copy worker entrypoint & binary IPC protocol for Zemberek (.zmbk)"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+zemberek-pack = { path = "../zemberek-pack" }
+zemberek-core = { path = "../zemberek-core" }
+zemberek-tok = { path = "../zemberek-tok" }
+zemberek-morph = { path = "../zemberek-morph" }
+zemberek-disambig = { path = "../zemberek-disambig" }
+zemberek-spell = { path = "../zemberek-spell" }
+zemberek-deasc = { path = "../zemberek-deasc" }
+zemberek-norm = { path = "../zemberek-norm" }

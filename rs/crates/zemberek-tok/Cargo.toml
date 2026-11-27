@@ -1,0 +1,9 @@
+[package]
+name = "zemberek-tok"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Zero-regex Turkish tokenizer, sentence boundary extractor, detokenizer, and UTF-8/UTF-16 span utilities."
+
+[dependencies]
+zemberek-core = { path = "../zemberek-core" }

@@ -1,0 +1,16 @@
+{
+  "name": "zemberek-extension-mv3",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Zemberek Turkish Writing Assistant — Chrome Manifest V3 Extension powered by Zero-Copy Rust/WebAssembly",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node tests/verify_mv3.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.5",
+    "typescript": "^5.5.4"
+  }
+}

@@ -1,0 +1,13 @@
+[package]
+name = "zemberek-norm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+zemberek-core = { path = "../zemberek-core" }
+zemberek-pack = { path = "../zemberek-pack" }
+zemberek-tok = { path = "../zemberek-tok" }
+zemberek-morph = { path = "../zemberek-morph" }
+zemberek-spell = { path = "../zemberek-spell" }
+zemberek-deasc = { path = "../zemberek-deasc" }

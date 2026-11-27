@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Zemberek Türkçe Yazım Stüdyosu</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg-light: #ffffff;
+        --bg-dark: #18181b;
+        --surface-light: #f4f4f5;
+        --surface-dark: #27272a;
+        --fg-light: #18181b;
+        --fg-dark: #f4f4f5;
+        --muted-light: #52525b;
+        --muted-dark: #a1a1aa;
+        --border-light: #e4e4e7;
+        --border-dark: #3f3f46;
+        --accent-light: #0d9488;
+        --accent-dark: #2dd4bf;
+        --bg: var(--bg-light);
+        --surface: var(--surface-light);
+        --fg: var(--fg-light);
+        --muted: var(--muted-light);
+        --border: var(--border-light);
+        --accent: var(--accent-light);
+        accent-color: var(--accent);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: var(--bg-dark);
+          --surface: var(--surface-dark);
+          --fg: var(--fg-dark);
+          --muted: var(--muted-dark);
+          --border: var(--border-dark);
+          --accent: var(--accent-dark);
+        }
+      }
+
+      @supports (color: light-dark(white, black)) {
+        :root {
+          --bg: light-dark(var(--bg-light), var(--bg-dark));
+          --surface: light-dark(var(--surface-light), var(--surface-dark));
+          --fg: light-dark(var(--fg-light), var(--fg-dark));
+          --muted: light-dark(var(--muted-light), var(--muted-dark));
+          --border: light-dark(var(--border-light), var(--border-dark));
+          --accent: light-dark(var(--accent-light), var(--accent-dark));
+        }
+      }
+
+      body {
+        margin: 0;
+        padding: 14px;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 13.5px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-height: 100vh;
+        box-sizing: border-box;
+        overflow-x: hidden;
+      }
+
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .header h1 {
+        margin: 0;
+        font-size: 14.5px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        white-space: nowrap;
+      }
+
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: none;
+      }
+
+      .meta {
+        font-size: 11.5px;
+        color: var(--muted);
+      }
+
+      #sp-status {
+        white-space: nowrap;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 185px;
+        resize: vertical;
+        background: var(--surface);
+        color: var(--fg);
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        padding: 10px 12px;
+        font-family: inherit;
+        font-size: 13.5px;
+        line-height: 1.5;
+        box-sizing: border-box;
+      }
+
+      textarea:focus-visible,
+      button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+      }
+
+      .actions {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+
+      .actions .copy-wrap {
+        margin-inline-start: auto;
+      }
+
+      button {
+        appearance: none;
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--fg);
+        border-radius: 7px;
+        padding: 5px 7px;
+        min-block-size: 30px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+      }
+
+      button.primary {
+        background: #0d9488;
+        border-color: #0d9488;
+        color: #ffffff;
+      }
+
+      button:hover {
+        opacity: 0.92;
+      }
+
+      .icon-btn {
+        padding: 0;
+        min-inline-size: 30px;
+        min-block-size: 30px;
+      }
+
+      .icon-btn.ghost {
+        background: transparent;
+        border-color: transparent;
+        color: var(--muted);
+      }
+
+      .icon-btn.ghost:hover {
+        background: var(--surface);
+        border-color: var(--border);
+        color: var(--fg);
+      }
+
+      .icon-svg {
+        pointer-events: none;
+        flex: none;
+      }
+
+      .copy-wrap {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+      }
+
+      .copy-btn .icon-check {
+        display: none;
+      }
+
+      .copy-btn[data-copied] {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .copy-btn[data-copied] .icon-copy {
+        display: none;
+      }
+
+      .copy-btn[data-copied] .icon-check {
+        display: block;
+      }
+
+      .copy-tip {
+        position: absolute;
+        inset-block-end: calc(100% + 5px);
+        inset-inline-end: 0;
+        background: var(--fg);
+        color: var(--bg);
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 7px;
+        border-radius: 5px;
+        white-space: nowrap;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 140ms ease;
+      }
+
+      .copy-btn[data-copied] + .copy-tip,
+      .copy-btn[data-failed] + .copy-tip {
+        opacity: 1;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .copy-tip {
+          transition: none;
+        }
+      }
+
+      .panel-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        padding: 10px 12px;
+        min-inline-size: 0;
+        overflow: hidden;
+      }
+
+      .panel-card h2 {
+        margin: 0 0 8px 0;
+        font-size: 12px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+
+      .issue-list,
+      .morph-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-inline-size: 0;
+      }
+
+      .issue-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 6px 8px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 12.5px;
+        min-inline-size: 0;
+      }
+
+      .issue-label {
+        min-inline-size: 0;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      .morph-row {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+        padding: 7px 9px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 12.5px;
+        min-inline-size: 0;
+        overflow: hidden;
+      }
+
+      .morph-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 6px;
+        min-inline-size: 0;
+      }
+
+      .morph-head strong {
+        min-inline-size: 0;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      .pos-pill {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 1px 6px;
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--muted);
+        border: 1px solid var(--border);
+        flex: none;
+      }
+
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 11.5px;
+        line-height: 1.45;
+        color: var(--muted);
+        min-inline-size: 0;
+        max-inline-size: 100%;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>
+        <img src="icons/icon-16.png" width="16" height="16" alt="" />
+        <span>Zemberek Yazım Stüdyosu</span>
+      </h1>
+      <div class="header-right">
+        <span id="sp-status" class="meta" role="status"></span>
+        <button id="sp-btn-settings" type="button" class="icon-btn ghost" aria-label="Eklenti ayarlarını aç" title="Ayarlar">
+          <svg class="icon-svg" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <textarea
+      id="sp-editor"
+      placeholder="Metninizi buraya yazın veya yapıştırın…"
+    ></textarea>
+
+    <div class="actions">
+      <button id="sp-btn-normalize" type="button" class="primary">Düzelt</button>
+      <button id="sp-btn-check" type="button">Denetle</button>
+      <button id="sp-btn-deasc" type="button">Deasciify</button>
+      <button id="sp-btn-morph" type="button">Çözümle</button>
+      <span class="copy-wrap">
+        <button id="sp-btn-copy" type="button" class="icon-btn copy-btn" aria-label="Metni panoya kopyala" title="Kopyala">
+          <svg class="icon-svg icon-copy" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          <svg class="icon-svg icon-check" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </button>
+        <span class="copy-tip" role="status"></span>
+      </span>
+      <button id="sp-btn-clear" type="button" class="icon-btn" aria-label="Metni temizle" title="Temizle">
+        <svg class="icon-svg" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18"></path>
+          <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+        </svg>
+      </button>
+    </div>
+
+    <div class="panel-card">
+      <h2>Bulunan Öneriler</h2>
+      <div id="sp-issues" class="issue-list">
+        <span class="meta">Henüz denetim çalıştırılmadı.</span>
+      </div>
+    </div>
+
+    <div class="panel-card">
+      <h2>Biçimbilimsel Çözümleme</h2>
+      <div id="sp-morph" class="morph-list">
+        <span class="meta">Çözümleme görmek için "Çözümle" düğmesine tıklayın.</span>
+      </div>
+    </div>
+
+    <script type="module" src="sidepanel.js"></script>
+  </body>
+</html>

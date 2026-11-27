@@ -1,0 +1,9 @@
+/target/
+/testdata/*.zmbk
+/testdata/*_parity.bin
+/testdata/step0_expected.tsv
+/testdata/step1_parity.tsv
+/testdata/step1_core_parity.tsv
+/testdata/step1_tok_parity.tsv
+/extension-mv3/node_modules/
+/extension-mv3/dist/

@@ -1,0 +1,11 @@
+[package]
+name = "zemberek-morph"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Zero-copy Turkish lexicon, dual-mode Stem CSR Radix Trie, dynamic user-dictionary overlay, and materialized Byte-FST analyzer/generator."
+
+[dependencies]
+zemberek-core = { path = "../zemberek-core" }
+zemberek-pack = { path = "../zemberek-pack" }
+zemberek-tok = { path = "../zemberek-tok" }

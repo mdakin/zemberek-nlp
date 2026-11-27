@@ -1,0 +1,6 @@
+[package]
+name = "zemberek-pack"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Zero-copy 64-byte-aligned .zmbk binary container, PackedDictItem, and universal MultiLevelMphf tables"
