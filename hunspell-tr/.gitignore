@@ -1,0 +1,8 @@
+/generator/target/
+/chromium-tools/build/
+/benchmarks/zemberek_java_eval/*.class
+/benchmarks/zemberek_java_eval/classes/
+/benchmarks/zemberek_java_eval/sources.txt
+/benchmarks/zemberek_java_eval/zemberek_solved_with_freq.tsv
+/benchmarks/zemberek_java_eval/zemberek_unsolved_with_freq.tsv
+/dict/tr-TR.bdic

@@ -1,0 +1,53 @@
+
+========================================================================================
+  ZEMBEREK JAVA 0.20.1 vs. NEW tr-TR-5-0.bdic (4.30 MB) vs. LEGACY tr-TR-4-0.bdic (9.64 MB)
+========================================================================================
+Grand Total Evaluated: 2172106 unique word types | 204770819 running tokens (Formal: 101202960 | Forum: 103567859)
+
+--- PART A: RAW 2-LIST COMPARISON (SOLVED vs UNSOLVED IN ZEMBEREK JAVA) ---
+
+Bucket: LIST 1: ALL ZEMBEREK-SOLVED
+  Unique Types:      1606823 | New Accepted:   1315505 ( 81.87%) | Legacy Accepted:    922602 ( 57.42%)
+  All Tokens:      202277019 | New Accepted: 199894560 ( 98.82%) | Legacy Accepted: 193028649 ( 95.43%)
+  Formal Tokens:    99764757 | New Accepted:  99002771 ( 99.24%) | Legacy Accepted:  93730602 ( 93.95%)
+  Forum Tokens:    102512262 | New Accepted: 100891789 ( 98.42%) | Legacy Accepted:  99298047 ( 96.86%)
+
+Bucket: LIST 2: ALL ZEMBEREK-UNSOLVED
+  Unique Types:       565283 | New Accepted:       241 (  0.04%) | Legacy Accepted:      2971 (  0.53%)
+  All Tokens:        2493800 | New Accepted:     41897 (  1.68%) | Legacy Accepted:     41506 (  1.66%)
+  Formal Tokens:     1438203 | New Accepted:     37265 (  2.59%) | Legacy Accepted:     15433 (  1.07%)
+  Forum Tokens:      1055597 | New Accepted:      4632 (  0.44%) | Legacy Accepted:     26073 (  2.47%)
+
+Overall Raw Agreement with Zemberek JavaTurkishMorphology (Solved=Accept, Unsolved=Reject):
+  Token-weighted agreement: New tr-TR-5-0.bdic = 98.82% | Legacy tr-TR-4-0.bdic = 95.46%
+  Unique-type agreement:    New tr-TR-5-0.bdic = 86.58% | Legacy tr-TR-4-0.bdic = 68.36%
+
+Strict Zemberek TurkishSpellChecker Agreement (STRICT_SPELL_OK=Accept, Case/Ext/Unsolved=Reject):
+  Token-weighted agreement: New tr-TR-5-0.bdic = 99.12% | Legacy tr-TR-4-0.bdic = 96.89%
+
+--- PART B: GRANULAR BREAKDOWN OF LIST 1 (4 ZEMBEREK SOLVED SUB-BUCKETS) ---
+
+Bucket: 1A. STRICT_SPELL_OK (Static Lexicon + Valid Case & Apostrophe)
+  Unique Types:      1387662 | New Accepted:   1273210 ( 91.75%) | Legacy Accepted:    916303 ( 66.03%)
+  All Tokens:      198780445 | New Accepted: 198293909 ( 99.76%) | Legacy Accepted: 192751049 ( 96.97%)
+  Formal Tokens:    98082484 | New Accepted:  97889259 ( 99.80%) | Legacy Accepted:  93556128 ( 95.39%)
+  Forum Tokens:    100697961 | New Accepted: 100404650 ( 99.71%) | Legacy Accepted:  99194921 ( 98.51%)
+
+Bucket: 1B. CASE_OR_APOS_ONLY (Lowercase Proper / Bad Apostrophe)
+  Unique Types:       104969 | New Accepted:     15682 ( 14.94%) | Legacy Accepted:      5206 (  4.96%)
+  All Tokens:        2260931 | New Accepted:    833337 ( 36.86%) | Legacy Accepted:    252734 ( 11.18%)
+  Formal Tokens:      946771 | New Accepted:    580416 ( 61.30%) | Legacy Accepted:    161082 ( 17.01%)
+  Forum Tokens:      1314160 | New Accepted:    252921 ( 19.25%) | Legacy Accepted:     91652 (  6.97%)
+
+Bucket: 1C. EXT_OR_INFORMAL (non-tdk.dict / Spoken Informal)
+  Unique Types:        22126 | New Accepted:     15819 ( 71.50%) | Legacy Accepted:       764 (  3.45%)
+  All Tokens:         670023 | New Accepted:    433827 ( 64.75%) | Legacy Accepted:     19133 (  2.86%)
+  Formal Tokens:      255266 | New Accepted:    238569 ( 93.46%) | Legacy Accepted:      8193 (  3.21%)
+  Forum Tokens:       414757 | New Accepted:    195258 ( 47.08%) | Legacy Accepted:     10940 (  2.64%)
+
+Bucket: 1D. DYNAMIC_RUNTIME (UnidentifiedTokenAnalyzer Proper/Numeral)
+  Unique Types:        92066 | New Accepted:     10794 ( 11.72%) | Legacy Accepted:       329 (  0.36%)
+  All Tokens:         565620 | New Accepted:    333487 ( 58.96%) | Legacy Accepted:      5733 (  1.01%)
+  Formal Tokens:      480236 | New Accepted:    294527 ( 61.33%) | Legacy Accepted:      5199 (  1.08%)
+  Forum Tokens:        85384 | New Accepted:     38960 ( 45.63%) | Legacy Accepted:       534 (  0.63%)
+
