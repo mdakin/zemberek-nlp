@@ -130,6 +130,7 @@ public final class SpanCandidateGenerator {
     final boolean capHere;
     final boolean sentenceAllCaps;
     private final NormalizationKnowledge knowledge;
+    private final LatticeMorphologySupport morph;
     private final TurkishMorphology strictMorphology;
     private Map<String, CandidateDraft> drafts = new LinkedHashMap<>(10);
 
@@ -138,12 +139,13 @@ public final class SpanCandidateGenerator {
         boolean capHere,
         boolean sentenceAllCaps,
         NormalizationKnowledge knowledge,
-        TurkishMorphology strictMorphology) {
+        LatticeMorphologySupport morph) {
       this.tok = tok;
       this.capHere = capHere;
       this.sentenceAllCaps = sentenceAllCaps;
       this.knowledge = knowledge;
-      this.strictMorphology = strictMorphology;
+      this.morph = morph;
+      this.strictMorphology = morph.strictMorphology;
     }
 
     String truecase(String normLower) {
@@ -160,6 +162,11 @@ public final class SpanCandidateGenerator {
         float suffixPrecision,
         float editCost,
         int diacriticDiffs) {
+      if ((sourceMask & NormV2Types.SRC_IDENTITY) == 0
+          && !normLower.equals(tok.lower())
+          && morph.containsVulgarWord(normLower)) {
+        return;
+      }
       putOrMerge(
           drafts,
           normSurface,
@@ -374,17 +381,18 @@ public final class SpanCandidateGenerator {
         outgoing[i].add(
             SpanArc.plain(
                 i, i + 1, tok.surface(), tok.lower(), NormV2Types.SRC_IDENTITY, punctTag));
-        splitMerger.addMultiTokenMerges(
-            this, tokens, i, capHere, profile.sentenceAllCaps, tokCaseCtx, outgoing[i]);
-        continue;
+      } else {
+        RewriteEntry parEntry = mined.parallel1ToN.get(tok.lower());
+        SlotDraftBuilder slot =
+            populateSlotCandidates(tokens, i, profile, capHere, tokCaseCtx, parEntry);
+        emitPrunedSlotArcs(tokens, i, tok, slot, parEntry, outgoing[i]);
       }
-
-      RewriteEntry parEntry = mined.parallel1ToN.get(tok.lower());
-      SlotDraftBuilder slot =
-          populateSlotCandidates(tokens, i, profile, capHere, tokCaseCtx, parEntry);
-      emitPrunedSlotArcs(tokens, i, tok, slot, parEntry, outgoing[i]);
+      int beforeMerges = outgoing[i].size();
       splitMerger.addMultiTokenMerges(
           this, tokens, i, capHere, profile.sentenceAllCaps, tokCaseCtx, outgoing[i]);
+      outgoing[i]
+          .subList(beforeMerges, outgoing[i].size())
+          .removeIf(arc -> morph.containsVulgarWord(arc.normLower));
     }
 
     return new SentenceLattice(
@@ -443,7 +451,7 @@ public final class SpanCandidateGenerator {
         if (upperAmbI || !explicitDiac) {
           pureAsciiWords++;
         }
-        if (!reg) {
+        if (!reg || isPureAsciiVulgar(t.lower())) {
           oovAsciiWords++;
         }
       }
@@ -530,16 +538,18 @@ public final class SpanCandidateGenerator {
     SpanToken tok = tokens.get(i);
     boolean strictKnown = profile.strictKnown[i];
     SlotDraftBuilder slot =
-        new SlotDraftBuilder(
-            tok, capHere, profile.sentenceAllCaps, mined, morph.strictMorphology);
+        new SlotDraftBuilder(tok, capHere, profile.sentenceAllCaps, mined, morph);
     char expectedPrevQ =
         computeImmediatePrevQuestionVowel(tokens, profile.deascByTok, i, profile.sentenceAllCaps);
 
     float rawKeepProb = parEntry != null ? parEntry.keepProb() : 0.0f;
     float rawKeepLogCnt = parEntry != null ? (float) Math.log1p(parEntry.keepCount()) : 0.0f;
 
-    addIdentityCandidate(
-        slot, tok, strictKnown, tokCaseCtx, parEntry, expectedPrevQ, rawKeepProb, rawKeepLogCnt);
+    String deasc = profile.deascByTok != null ? profile.deascByTok[i] : null;
+    if (deasc == null || deasc.equals(tok.lower()) || !isPureAsciiVulgar(tok.lower())) {
+      addIdentityCandidate(
+          slot, tok, strictKnown, tokCaseCtx, parEntry, expectedPrevQ, rawKeepProb, rawKeepLogCnt);
+    }
     addParallelRewriteCandidates(slot, tokens, i, profile, capHere, parEntry);
 
     if (!tok.isRandomLaugh()) {
@@ -572,6 +582,10 @@ public final class SpanCandidateGenerator {
       slot.applyContextualTruecasing(tokCaseCtx);
     }
     return slot;
+  }
+
+  private boolean isPureAsciiVulgar(String wordLower) {
+    return !hasExplicitTurkishDiacritics(wordLower) && morph.isVulgarOnly(wordLower);
   }
 
   private void addIdentityCandidate(

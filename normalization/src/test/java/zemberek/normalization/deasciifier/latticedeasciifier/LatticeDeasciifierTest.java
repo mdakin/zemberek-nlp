@@ -255,4 +255,23 @@ public class LatticeDeasciifierTest {
           defaultDeasciifier.deasciify("Rüzgârda kâgit ucusuyor.", mode));
     }
   }
+
+  @Test
+  public void vulgaritySafetyAndCleanHomographRestorationShouldHold() {
+    LatticeDeasciifier deasciifier = LatticeDeasciifier.createWithDefaults();
+    assertEquals("Elmanın suyunu sık.", deasciifier.deasciify("Elmanin suyunu sik."));
+    assertEquals("Elbise çok şık duruyor.", deasciifier.deasciify("Elbise cok sik duruyor."));
+    assertEquals("Canım çok sıkıldı.", deasciifier.deasciify("Canim cok sikildi."));
+    assertEquals("Asansörde sıkıştık.", deasciifier.deasciify("Asansorde sikistik."));
+    assertEquals("Pantolonun paçası sökük.", deasciifier.deasciify("Pantolonun pacasi sokuk."));
+    assertEquals("Geminin kıç tarafı.", deasciifier.deasciify("Geminin kic tarafi."));
+
+    for (String unchanged :
+        new String[] {"gotun", "tasak", "sicti", "bok", "götün", "pust", "surtuk"}) {
+      assertEquals(
+          "Expected no vulgar synthesis or archaic corruption for: " + unchanged,
+          unchanged,
+          deasciifier.deasciify(unchanged));
+    }
+  }
 }
