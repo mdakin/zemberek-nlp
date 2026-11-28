@@ -16,8 +16,7 @@ import zemberek.morphology.analysis.format.ConlluSentence;
  * <p>Typical usage:
  * <pre>{@code
  * TurkishMorphology morphology = TurkishMorphology.createWithDefaults();
- * TurkishDependencyParser parser = TurkishDependencyParser.fromModelFile(
- *     morphology, Paths.get("/path/to/dep_boun_v1.bin.gz"));
+ * TurkishDependencyParser parser = TurkishDependencyParser.createWithDefaults(morphology);
  *
  * DependencyTree tree = parser.parse("Prof. Dr. Fethi Bey saat 14.30'da Türkiye'ye döndü.");
  * System.out.println(tree.toConllu());
@@ -25,8 +24,8 @@ import zemberek.morphology.analysis.format.ConlluSentence;
  */
 public final class TurkishDependencyParser implements DependencyParser {
 
-  /** Default classpath resource path for the bundled UD_Turkish-BOUN model. */
-  public static final String DEFAULT_MODEL_RESOURCE = "/tr/dependency/dep_boun_v1.bin.gz";
+  /** Default classpath resource path for the bundled distilled {@code UD_Turkish-BOUN} model. */
+  public static final String DEFAULT_MODEL_RESOURCE = "/tr/dependency/dep_boun_medium_int8.bin.gz";
 
   private final TurkishMorphology morphology;
   private final BiaffineDependencyModel model;
@@ -42,11 +41,8 @@ public final class TurkishDependencyParser implements DependencyParser {
   }
 
   /**
-   * Creates a parser backed by the bundled default {@code UD_Turkish-BOUN} model at
-   * {@link #DEFAULT_MODEL_RESOURCE}.
-   *
-   * <p>Note: the default binary model is not yet bundled in the JAR until Phase 4 training
-   * completes; until then, load a trained model via {@link #fromModelFile(TurkishMorphology, Path)}.
+   * Creates a parser backed by the bundled default {@code UD_Turkish-BOUN} model
+   * ({@link #DEFAULT_MODEL_RESOURCE}, 4.21 MB INT8 distilled BiGRU + Deep Biaffine).
    */
   public static TurkishDependencyParser createWithDefaults(TurkishMorphology morphology)
       throws IOException {

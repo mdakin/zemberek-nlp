@@ -24,6 +24,9 @@
         <button class="tab-btn" data-tab="morphology" role="tab" aria-selected="false">
           Morphology &amp; Disambiguation
         </button>
+        <button class="tab-btn" data-tab="dependency" role="tab" aria-selected="false">
+          Dependency Tree
+        </button>
         <button class="tab-btn" data-tab="tokenization" role="tab" aria-selected="false">
           Tokenizer
         </button>
@@ -93,6 +96,9 @@
               </label>
               <button id="sendToMorphBtn" class="btn-ghost" type="button" title="Analyze normalized text in Morphology tab">
                 Morph →
+              </button>
+              <button id="sendToDepBtn" class="btn-ghost" type="button" title="Parse normalized text in Dependency Tree tab">
+                Deps →
               </button>
               <button id="copyOutputBtn" class="btn-primary-sm" type="button">Copy</button>
             </div>
@@ -222,6 +228,9 @@
               <button id="deascToMorphBtn" class="btn-ghost" type="button" title="Analyze deasciified text in Morphology tab">
                 Morph →
               </button>
+              <button id="deascToDepBtn" class="btn-ghost" type="button" title="Parse deasciified text in Dependency Tree tab">
+                Deps →
+              </button>
               <button id="copyDeascBtn" class="btn-primary-sm" type="button">Copy</button>
             </div>
           </div>
@@ -306,7 +315,71 @@
       </div>
     </section>
 
-    <!-- ==================== TAB 4: TOKENIZATION ==================== -->
+    <!-- ==================== TAB 4: DEPENDENCY TREE ==================== -->
+    <section id="tab-dependency" class="tab-panel">
+      <div class="presets-row">
+        <span class="presets-label">Examples:</span>
+        <div id="depPresetButtons" class="preset-chips"></div>
+      </div>
+
+      <div class="panel-card">
+        <div class="panel-header">
+          <div>
+            <h3 class="panel-title">Turkish Universal Dependencies (UD v2) Dependency Tree</h3>
+            <p class="panel-subtitle">
+              Live pure-Java neural parsing via <code>TurkishDependencyParser</code> (BiLSTM-Biaffine INT8, <code>UD_Turkish-BOUN</code>). Hover or click any token to highlight its arcs and inspect UD features.
+            </p>
+          </div>
+          <div class="io-actions">
+            <span id="depLatencyBadge" class="latency-pill">0.00 ms</span>
+            <span id="depStatsBadge" class="edits-pill">0 tokens</span>
+            <button id="depToMorphBtn" class="btn-ghost" type="button" title="Analyze text in Morphology tab">
+              Morph →
+            </button>
+            <button id="clearDepBtn" class="btn-ghost" type="button">Clear</button>
+            <button id="copyDepConlluBtn" class="btn-primary-sm" type="button">Copy CoNLL-U</button>
+          </div>
+        </div>
+
+        <textarea
+          id="depInput"
+          class="single-textarea"
+          spellcheck="false"
+          placeholder="Type one or more Turkish sentences to visualize Universal Dependencies v2 trees and CoNLL-U output..."
+        ></textarea>
+
+        <div class="dep-toolbar">
+          <div class="dep-legend">
+            <span class="dep-legend-pill cat-root">root</span>
+            <span class="dep-legend-pill cat-core">core args (nsubj, obj, ccomp)</span>
+            <span class="dep-legend-pill cat-mod">modifiers (nmod, amod, advmod, obl, acl)</span>
+            <span class="dep-legend-pill cat-func">function (case, aux, cop, det, cc)</span>
+            <span class="dep-legend-pill cat-punct">punct</span>
+          </div>
+          <div class="io-actions">
+            <label class="toggle-chip" title="Show 10-column CoNLL-U table and raw tab-separated export below the diagrams">
+              <input type="checkbox" id="depShowConlluToggle" checked />
+              <span>Show CoNLL-U</span>
+            </label>
+          </div>
+        </div>
+
+        <div id="depTrees" class="dep-trees"></div>
+
+        <div id="depConlluSection" class="dep-conllu-section hidden">
+          <div class="panel-header" style="margin-bottom: 8px;">
+            <div>
+              <h4 class="panel-title" style="font-size: 13.5px;">CoNLL-U v2 Annotation Table &amp; Raw Export</h4>
+              <p class="panel-subtitle">Standard 10-column Universal Dependencies v2 representation (including Multi-Word Token ranges)</p>
+            </div>
+          </div>
+          <div id="depConlluTableWrap" class="dep-conllu-table-wrap"></div>
+          <pre id="depConlluRaw" class="dep-conllu-raw"></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 5: TOKENIZATION ==================== -->
     <section id="tab-tokenization" class="tab-panel">
       <div class="panel-card">
         <div class="panel-header">

@@ -17,6 +17,7 @@ Please read the [FAQ](https://github.com/ahmetaa/zemberek-nlp/wiki/FAQ) for comm
 | [Morphology](morphology)        | zemberek-morphology     | Turkish morphological analysis, disambiguation and word generation. |
 | [Tokenization](tokenization)    | zemberek-tokenization   | Turkish tokenization, detokenization and sentence boundary detection. |
 | [Normalization](normalization)  | zemberek-normalization  | Spell checker, deasciifier (`LatticeDeasciifier`), and noisy text normalization. |
+| [Dependency Parsing](dependency)| zemberek-dependency     | Universal Dependencies v2 (`UD_Turkish-BOUN`) syntactic dependency parser (`4.2 MB` pure Java). |
 | [NER](ner)                      | zemberek-ner            | Turkish Named Entity Recognition. |
 | [Classification](classification)| zemberek-classification | Text classification based on Java port of fastText project. |
 | [Language Identification](lang-id)| zemberek-lang-id      | Fast identification of text language. |
@@ -27,7 +28,7 @@ Please read the [FAQ](https://github.com/ahmetaa/zemberek-nlp/wiki/FAQ) for comm
 
 ## Interactive Web Demo Studio
 
-You can explore morphological analysis, ambiguity resolution, noisy text normalization, deasciification, and tokenization interactively with `StartWebDemo` (`./apps/run_demo.sh`):
+You can explore morphological analysis, ambiguity resolution, dependency parsing, noisy text normalization, deasciification, and tokenization interactively with `StartWebDemo` (`./apps/run_demo.sh`):
 
 ![Zemberek Web Demo — Morphological Analysis & Disambiguation](docs/demo-images/web-demo-morphology.png)
 

@@ -18,11 +18,15 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.function.Function;
+import zemberek.dependency.DependencyNode;
+import zemberek.dependency.DependencyTree;
+import zemberek.dependency.TurkishDependencyParser;
 import zemberek.lm.compression.SmoothLm;
 import zemberek.morphology.TurkishMorphology;
 import zemberek.morphology.analysis.SentenceAnalysis;
 import zemberek.morphology.analysis.SentenceWordAnalysis;
 import zemberek.morphology.analysis.SingleAnalysis;
+import zemberek.morphology.analysis.format.ConlluMwtSpan;
 import zemberek.normalization.v2.SpanLatticePerceptronNormalizer;
 import zemberek.tokenization.Token;
 import zemberek.tokenization.TurkishSentenceExtractor;
@@ -35,6 +39,7 @@ import zemberek.tokenization.TurkishTokenizer;
  *       interactive multi-span lattice inspection.
  *   <li><b>Deasciifiers</b>: {@code LatticeDeasciifier} vs. classic {@code Deasciifier}.
  *   <li><b>Morphology &amp; Disambiguation</b>: {@link TurkishMorphology#analyzeAndDisambiguate}.
+ *   <li><b>Dependency Parsing</b>: {@link TurkishDependencyParser} Universal Dependencies v2 trees.
  *   <li><b>Tokenization &amp; Sentence Boundary Extraction</b>: {@link TurkishTokenizer} and
  *       {@link TurkishSentenceExtractor}.
  * </ul>
@@ -54,13 +59,31 @@ public final class ZemberekDemoServer {
   private final TurkishMorphology morphology;
   private final NormalizationInspector normInspector;
   private final DeasciifierInspector deasciifierInspector;
+  private final TurkishDependencyParser dependencyParser;
   private final Object engineLock = new Object();
 
   public ZemberekDemoServer(
       TurkishMorphology morphology, SpanLatticePerceptronNormalizer perceptron) {
+    this(morphology, perceptron, tryLoadDefaultDependencyParser(morphology));
+  }
+
+  public ZemberekDemoServer(
+      TurkishMorphology morphology,
+      SpanLatticePerceptronNormalizer perceptron,
+      TurkishDependencyParser dependencyParser) {
     this.morphology = morphology;
     this.normInspector = new NormalizationInspector(perceptron);
     this.deasciifierInspector = new DeasciifierInspector(morphology);
+    this.dependencyParser = dependencyParser;
+  }
+
+  private static TurkishDependencyParser tryLoadDefaultDependencyParser(
+      TurkishMorphology morphology) {
+    try {
+      return TurkishDependencyParser.createWithDefaults(morphology);
+    } catch (IOException e) {
+      return null;
+    }
   }
 
   public record ServerInfoResponse(
@@ -72,6 +95,31 @@ public final class ZemberekDemoServer {
       String surface, String bestPos, String bestFormatted, List<String> altParses) {}
 
   public record MorphResponse(double latencyMs, List<MorphWordDto> words) {}
+
+  public record DependencyNodeDto(
+      int id,
+      String form,
+      String lemma,
+      String upos,
+      String xpos,
+      String feats,
+      int headId,
+      String deprel,
+      String misc) {}
+
+  public record DependencyMwtDto(int startId, int endId, String form) {}
+
+  public record DependencySentenceDto(
+      String text,
+      List<DependencyNodeDto> nodes,
+      List<DependencyMwtDto> mwtSpans,
+      String conllu) {}
+
+  public record DependencyResponse(
+      double latencyMs,
+      int totalTokens,
+      List<DependencySentenceDto> sentences,
+      String conllu) {}
 
   public record TokenDto(String text, String type, int start, int end) {}
 
@@ -118,13 +166,18 @@ public final class ZemberekDemoServer {
               : SpanLatticePerceptronNormalizer.createWithDefaults(morphology, lm);
     }
 
+    System.out.println(
+        "[ZemberekDemoServer] Loading bundled Turkish UD dependency parser...");
+    TurkishDependencyParser dependencyParser =
+        TurkishDependencyParser.createWithDefaults(morphology);
+
     System.out.printf(
         Locale.US,
         "[ZemberekDemoServer] Models loaded in %.2fs (Perceptron=%.2f MB, %,d sparse features)%n",
         (System.nanoTime() - t0) / 1e9,
         perceptron.modelRamBytes() / (1024.0 * 1024.0),
         perceptron.activeSparseFeatureCount());
-    return new ZemberekDemoServer(morphology, perceptron);
+    return new ZemberekDemoServer(morphology, perceptron, dependencyParser);
   }
 
   public HttpServer start(String host, int port) throws IOException {
@@ -140,6 +193,8 @@ public final class ZemberekDemoServer {
     server.createContext(
         "/api/morphology", ex -> handlePost(ex, TextRequest.class, this::runMorphology));
     server.createContext(
+        "/api/dependency", ex -> handlePost(ex, TextRequest.class, this::runDependency));
+    server.createContext(
         "/api/tokenize", ex -> handlePost(ex, TextRequest.class, this::runTokenize));
     server.createContext("/", this::handleStatic);
 
@@ -149,7 +204,7 @@ public final class ZemberekDemoServer {
     System.out.printf(
         Locale.US, "  Zemberek NLP Web Demo running at: http://%s:%d/%n", host, boundPort);
     System.out.println(
-        "  Active modules : Normalization (v2.4), Deasciifiers, Morphology, Tokenization");
+        "  Active modules : Normalization (v2.4), Deasciifiers, Morphology, Dependency Parsing, Tokenization");
     System.out.println("  Press Ctrl+C to stop.");
     System.out.println("========================================================================");
     return server;
@@ -165,6 +220,9 @@ public final class ZemberekDemoServer {
           "yarın bende gelicem ama saat 7 de orda olurmusun", "perceptron", true, true);
       deasciifierInspector.warmup();
       morphology.analyzeAndDisambiguate("Yarın ben de geleceğim.");
+      if (dependencyParser != null) {
+        dependencyParser.parse("Yarın ben de geleceğim.");
+      }
     }
   }
 
@@ -236,6 +294,60 @@ public final class ZemberekDemoServer {
     return new MorphResponse(roundMs((System.nanoTime() - t0) / 1e6), words);
   }
 
+  private DependencyResponse runDependency(TextRequest req) {
+    String text = clampText(req.text(), 4_000).trim();
+    if (text.isEmpty() || dependencyParser == null) {
+      return new DependencyResponse(0.0, 0, List.of(), "");
+    }
+    List<DependencySentenceDto> sentences = new ArrayList<>();
+    StringBuilder allConllu = new StringBuilder();
+    int totalTokens = 0;
+    long t0 = System.nanoTime();
+    synchronized (engineLock) {
+      List<String> sents = TurkishSentenceExtractor.DEFAULT.fromParagraph(text);
+      if (sents.isEmpty()) {
+        sents = List.of(text);
+      }
+      int maxSents = 12;
+      for (String s : sents) {
+        if (s.isBlank()) {
+          continue;
+        }
+        if (sentences.size() >= maxSents) {
+          break;
+        }
+        DependencyTree tree = dependencyParser.parse(s);
+        List<DependencyNodeDto> nodeDtos = new ArrayList<>(tree.size());
+        for (DependencyNode n : tree.getNodes()) {
+          nodeDtos.add(
+              new DependencyNodeDto(
+                  n.id(),
+                  n.form(),
+                  n.lemma(),
+                  n.upos(),
+                  n.xpos(),
+                  n.feats(),
+                  n.headId(),
+                  n.deprel(),
+                  n.misc()));
+        }
+        List<DependencyMwtDto> mwtDtos = new ArrayList<>();
+        for (ConlluMwtSpan span : tree.getConlluSentence().mwtSpans()) {
+          mwtDtos.add(new DependencyMwtDto(span.startId(), span.endId(), span.form()));
+        }
+        String sentConllu = tree.toConllu().trim();
+        if (!allConllu.isEmpty() && !sentConllu.isEmpty()) {
+          allConllu.append("\n\n");
+        }
+        allConllu.append(sentConllu);
+        totalTokens += nodeDtos.size();
+        sentences.add(new DependencySentenceDto(s, nodeDtos, mwtDtos, sentConllu));
+      }
+    }
+    return new DependencyResponse(
+        roundMs((System.nanoTime() - t0) / 1e6), totalTokens, sentences, allConllu.toString());
+  }
+
   private TokenizeResponse runTokenize(TextRequest req) {
     String text = clampText(req.text(), 10_000);
     long t0 = System.nanoTime();
@@ -279,6 +391,8 @@ public final class ZemberekDemoServer {
               "/deasciifier",
               "/normalization",
               "/morphology",
+              "/dependency",
+              "/dependencies",
               "/tokenization",
               "/tokenizer" ->
               "index.html";

@@ -42,7 +42,7 @@ if [[ ! -s "${DEPS_CP_FILE}" \
 fi
 
 DEPS_CP="$(cat "${DEPS_CP_FILE}")"
-RESOURCES_CP="${REPO_ROOT}/apps/src/main/resources:${REPO_ROOT}/normalization/src/main/resources:${REPO_ROOT}/morphology/src/main/resources:${REPO_ROOT}/tokenization/src/main/resources:${REPO_ROOT}/core/src/main/resources"
+RESOURCES_CP="${REPO_ROOT}/apps/src/main/resources:${REPO_ROOT}/dependency/src/main/resources:${REPO_ROOT}/normalization/src/main/resources:${REPO_ROOT}/morphology/src/main/resources:${REPO_ROOT}/tokenization/src/main/resources:${REPO_ROOT}/core/src/main/resources"
 
 SRC_PATHS=(
   "${REPO_ROOT}/core/src/main/java"
@@ -51,13 +51,14 @@ SRC_PATHS=(
   "${REPO_ROOT}/morphology/src/main/java"
   "${PROTO_GEN_DIR}"
   "${REPO_ROOT}/normalization/src/main/java"
+  "${REPO_ROOT}/dependency/src/main/java"
   "${REPO_ROOT}/apps/src/main/java/zemberek/apps/demo"
   "${REPO_ROOT}/apps/src/main/java/zemberek/apps/ConsoleApp.java"
   "${REPO_ROOT}/apps/src/main/java/zemberek/apps/ApplicationRunner.java"
 )
 
 SRC_LIST="${REPO_ROOT}/apps/target/demo_sources.txt"
-if [[ ! -f "${SENTINEL_FILE}" ]]; then
+if [[ ! -f "${SENTINEL_FILE}" || "${BASH_SOURCE[0]}" -nt "${SENTINEL_FILE}" ]]; then
   echo "[run_demo.sh] Compiling Zemberek modules for Web Demo..."
   find "${SRC_PATHS[@]}" -name '*.java' > "${SRC_LIST}"
   javac --release 21 -encoding UTF-8 -cp "${DEPS_CP}" -d "${CLASSES_DIR}" @"${SRC_LIST}"

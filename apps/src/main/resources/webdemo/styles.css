@@ -936,3 +936,252 @@ code {
 .char-raw { font-size: 11px; color: var(--text-faint); }
 .char-arrow { font-size: 9px; color: var(--text-faint); line-height: 1; margin: 1px 0; }
 .char-out { font-size: 14px; font-weight: 700; color: var(--text); }
+
+/* ==================== Dependency Tree Tab ==================== */
+.dep-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.dep-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dep-legend-pill {
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.dep-legend-pill.cat-root { background: var(--green-soft); color: var(--green); }
+.dep-legend-pill.cat-core { background: var(--accent-soft); color: var(--accent); }
+.dep-legend-pill.cat-mod { background: var(--violet-soft); color: var(--violet); }
+.dep-legend-pill.cat-func { background: var(--amber-soft); color: var(--amber); }
+.dep-legend-pill.cat-punct { background: var(--surface-subtle); color: var(--text-faint); border-color: var(--border); }
+
+.dep-trees {
+  display: grid;
+  gap: 16px;
+}
+
+.dep-sent-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.dep-sent-header {
+  padding: 8px 13px;
+  background: var(--surface-subtle);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dep-sent-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dep-sent-meta {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.dep-svg-wrap {
+  width: 100%;
+  overflow-x: auto;
+  padding: 12px 14px 10px;
+  background: var(--surface);
+}
+
+.dep-svg {
+  display: block;
+  margin: 0 auto;
+  user-select: none;
+}
+
+.dep-svg .dep-arc {
+  cursor: pointer;
+  transition: opacity 0.14s ease;
+}
+
+.dep-svg .dep-arc-path {
+  fill: none;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  transition: stroke-width 0.14s ease;
+}
+
+.dep-svg .dep-arc-label-bg {
+  fill: var(--surface);
+  stroke-width: 1;
+}
+
+.dep-svg .dep-arc-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.dep-svg .dep-token {
+  cursor: pointer;
+  transition: opacity 0.14s ease;
+}
+
+.dep-svg .dep-token-box {
+  fill: var(--surface-subtle);
+  stroke: var(--border);
+  stroke-width: 1.25;
+  rx: 7;
+  transition: fill 0.12s ease, stroke 0.12s ease;
+}
+
+.dep-svg .dep-token.is-root .dep-token-box {
+  fill: var(--green-soft);
+  stroke: var(--green);
+}
+
+.dep-svg .dep-token.is-selected .dep-token-box,
+.dep-svg .dep-token:hover .dep-token-box {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.dep-svg .dep-token-form {
+  fill: var(--text);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.dep-svg .dep-token-upos {
+  fill: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  text-anchor: middle;
+}
+
+.dep-svg .dep-token-id {
+  fill: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  text-anchor: middle;
+}
+
+.dep-svg .dep-mwt-line {
+  fill: none;
+  stroke: var(--violet);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 2;
+}
+
+.dep-svg .dep-mwt-label {
+  fill: var(--violet);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  text-anchor: middle;
+}
+
+/* Interactive Dim / Highlight States */
+.dep-svg.has-focus .dep-arc:not(.focused) { opacity: 0.16; }
+.dep-svg.has-focus .dep-token:not(.focused) { opacity: 0.35; }
+.dep-svg.has-focus .dep-arc.focused .dep-arc-path { stroke-width: 2.5; }
+
+/* Arc Category Colors */
+.dep-cat-root { --arc-color: var(--green); }
+.dep-cat-core { --arc-color: var(--accent); }
+.dep-cat-mod { --arc-color: var(--violet); }
+.dep-cat-func { --arc-color: var(--amber); }
+.dep-cat-punct { --arc-color: var(--text-faint); }
+
+.dep-arc .dep-arc-path { stroke: var(--arc-color); }
+.dep-arc .dep-arc-arrow { fill: var(--arc-color); }
+.dep-arc .dep-arc-label-bg { stroke: var(--arc-color); }
+.dep-arc .dep-arc-label { fill: var(--arc-color); }
+
+/* Token Detail Strip Below SVG */
+.dep-detail-strip {
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-subtle);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  font-size: 12.5px;
+}
+
+.dep-detail-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.dep-detail-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-faint);
+}
+
+.dep-feat-pills {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.dep-feat-pill {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.dep-conllu-section {
+  margin-top: 16px;
+}
+
+.dep-conllu-table-wrap {
+  overflow-x: auto;
+  margin-bottom: 12px;
+}
+
+.dep-conllu-raw {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-subtle);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  overflow-x: auto;
+  white-space: pre;
+}
+

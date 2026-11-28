@@ -67,6 +67,29 @@
     }
   ];
 
+  const DEP_PRESETS = [
+    {
+      label: "Simple Clause",
+      text: "Küçük sarı kuş yavaşça penceremin kenarına kondu."
+    },
+    {
+      label: "News & Entities",
+      text: "Prof. Dr. Fethi Bey saat 14.30'da Türkiye'ye döndü."
+    },
+    {
+      label: "MWT Copula & -ki",
+      text: "Dün İstanbul'daydı ama masadaki kitabı evde unutmuştu."
+    },
+    {
+      label: "Relative Clause",
+      text: "Okuldan eve dönen öğrenciler yeni açılan kütüphanede ders çalıştı."
+    },
+    {
+      label: "Multi-Sentence",
+      text: "Zemberek doğal dil işleme kütüphanesi artık bağımlılık ayrıştırmayı destekliyor. Türkçe cümleler hızla çözümleniyor."
+    }
+  ];
+
   const ASCII_FOLD_MAP = {
     "ç": "c", "Ç": "C",
     "ğ": "g", "Ğ": "G",
@@ -87,6 +110,7 @@
     deascMetaById: {},
     lastResponse: null,
     lastDeascResponse: null,
+    lastDepResponse: null,
     selectedLineIdx: 0,
     selectedTokenIdx: null,
     selectedDeascTokenIdx: null
@@ -110,6 +134,7 @@
   const clearInputBtn = document.getElementById("clearInputBtn");
   const copyOutputBtn = document.getElementById("copyOutputBtn");
   const sendToMorphBtn = document.getElementById("sendToMorphBtn");
+  const sendToDepBtn = document.getElementById("sendToDepBtn");
   const comparisonPanel = document.getElementById("comparisonPanel");
   const comparisonBody = document.getElementById("comparisonBody");
   const inspectorPanel = document.getElementById("inspectorPanel");
@@ -134,6 +159,7 @@
   const copyDeascBtn = document.getElementById("copyDeascBtn");
   const deascToNormBtn = document.getElementById("deascToNormBtn");
   const deascToMorphBtn = document.getElementById("deascToMorphBtn");
+  const deascToDepBtn = document.getElementById("deascToDepBtn");
   const deascComparisonPanel = document.getElementById("deascComparisonPanel");
   const deascComparisonBody = document.getElementById("deascComparisonBody");
   const deascDisagreeBadge = document.getElementById("deascDisagreeBadge");
@@ -143,10 +169,22 @@
   const deascCharDetailBody = document.getElementById("deascCharDetailBody");
   const deascVariantDetailBody = document.getElementById("deascVariantDetailBody");
 
-  // Morphology & Tokenizer DOM
+  // Morphology, Dependency & Tokenizer DOM
   const morphInput = document.getElementById("morphInput");
   const morphResults = document.getElementById("morphResults");
   const morphLatencyBadge = document.getElementById("morphLatencyBadge");
+  const depPresetButtons = document.getElementById("depPresetButtons");
+  const depInput = document.getElementById("depInput");
+  const depLatencyBadge = document.getElementById("depLatencyBadge");
+  const depStatsBadge = document.getElementById("depStatsBadge");
+  const depToMorphBtn = document.getElementById("depToMorphBtn");
+  const clearDepBtn = document.getElementById("clearDepBtn");
+  const copyDepConlluBtn = document.getElementById("copyDepConlluBtn");
+  const depShowConlluToggle = document.getElementById("depShowConlluToggle");
+  const depTrees = document.getElementById("depTrees");
+  const depConlluSection = document.getElementById("depConlluSection");
+  const depConlluTableWrap = document.getElementById("depConlluTableWrap");
+  const depConlluRaw = document.getElementById("depConlluRaw");
   const tokInput = document.getElementById("tokInput");
   const tokSentences = document.getElementById("tokSentences");
   const tokResults = document.getElementById("tokResults");
@@ -223,6 +261,13 @@
     switchTab("morphology", true);
   }
 
+  function openInDependency(text) {
+    if (text) {
+      depInput.value = text;
+    }
+    switchTab("dependency", true);
+  }
+
   // Module Tab Switching & URL Sync
   document.querySelectorAll(".tab-btn").forEach((btn) => {
     btn.addEventListener("click", () => switchTab(btn.dataset.tab, true));
@@ -234,6 +279,7 @@
     const candidate = hash || path.replace(/^\//, "");
     if (candidate === "deasciifiers" || candidate === "deasciifier") return "deasciifiers";
     if (candidate === "morphology") return "morphology";
+    if (candidate === "dependency" || candidate === "dependencies") return "dependency";
     if (candidate === "tokenization" || candidate === "tokenizer") return "tokenization";
     return "normalization";
   }
@@ -253,6 +299,7 @@
     if (tabName === "normalization") runNormalize();
     else if (tabName === "deasciifiers") runDeasciify();
     else if (tabName === "morphology") runMorphology();
+    else if (tabName === "dependency") runDependency();
     else if (tabName === "tokenization") runTokenize();
   }
 
@@ -264,6 +311,10 @@
   initPresets(DEASC_PRESETS, deascPresetButtons, deascInput, () => {
     state.selectedDeascTokenIdx = null;
     runDeasciify();
+  });
+
+  initPresets(DEP_PRESETS, depPresetButtons, depInput, () => {
+    runDependency();
   });
 
   // Load Server Info
@@ -954,7 +1005,523 @@
       .join("");
   }
 
-  // ==================== TAB 4: TOKENIZER ====================
+  // ==================== TAB 4: DEPENDENCY TREE ====================
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  const DEP_CORE_RELS = new Set(["nsubj", "obj", "iobj", "csubj", "ccomp", "xcomp"]);
+  const DEP_FUNC_RELS = new Set(["case", "aux", "cop", "det", "cc", "mark", "clf", "fixed", "expl"]);
+
+  function classifyDeprel(deprel) {
+    const base = String(deprel || "").split(":")[0].toLowerCase();
+    if (base === "root") return "root";
+    if (base === "punct") return "punct";
+    if (DEP_CORE_RELS.has(base)) return "core";
+    if (DEP_FUNC_RELS.has(base)) return "func";
+    return "mod";
+  }
+
+  function svgEl(tag, attrs = {}, textContent = null) {
+    const el = document.createElementNS(SVG_NS, tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      el.setAttribute(k, String(v));
+    }
+    if (textContent !== null) {
+      el.textContent = textContent;
+    }
+    return el;
+  }
+
+  async function runDependency() {
+    const text = depInput.value.trim();
+    if (!text) {
+      state.lastDepResponse = null;
+      depLatencyBadge.textContent = "0.00 ms";
+      depStatsBadge.textContent = "0 tokens";
+      depTrees.innerHTML = `<div class="io-meta" style="padding: 12px 4px;">Type a Turkish sentence above to visualize its Universal Dependencies v2 tree.</div>`;
+      depConlluSection.classList.add("hidden");
+      depConlluTableWrap.innerHTML = "";
+      depConlluRaw.textContent = "";
+      return;
+    }
+
+    const data = await postJsonWithAbort("dep", "/api/dependency", { text });
+    if (!data) return;
+    state.lastDepResponse = data;
+    renderDependencyResponse(data);
+  }
+
+  function renderDependencyResponse(data) {
+    const sents = data.sentences || [];
+    depLatencyBadge.textContent = `${data.latencyMs.toFixed(2)} ms`;
+    const sentWord = sents.length === 1 ? "sentence" : "sentences";
+    const tokWord = data.totalTokens === 1 ? "token" : "tokens";
+    depStatsBadge.textContent = `${sents.length} ${sentWord} · ${data.totalTokens} ${tokWord}`;
+    serverStatusPill.textContent = `Live · ${data.latencyMs.toFixed(2)} ms`;
+
+    depTrees.innerHTML = "";
+    if (sents.length === 0) {
+      depTrees.innerHTML = `<div class="io-meta" style="padding: 12px 4px;">No syntactic tokens produced.</div>`;
+      depConlluSection.classList.add("hidden");
+      return;
+    }
+
+    sents.forEach((sent, idx) => {
+      depTrees.appendChild(renderDependencySentenceCard(sent, idx, sents.length));
+    });
+
+    if (depShowConlluToggle.checked) {
+      depConlluSection.classList.remove("hidden");
+      renderDependencyConllu(data);
+    } else {
+      depConlluSection.classList.add("hidden");
+    }
+  }
+
+  function renderDependencySentenceCard(sent, sIdx, totalSents) {
+    const card = document.createElement("div");
+    card.className = "dep-sent-card";
+
+    const nodes = sent.nodes || [];
+    const rootNode = nodes.find((n) => n.headId === 0) || nodes[0];
+    const mwtCount = (sent.mwtSpans || []).length;
+    const mwtMeta = mwtCount > 0 ? ` · ${mwtCount} MWT` : "";
+
+    const header = document.createElement("div");
+    header.className = "dep-sent-header";
+    header.innerHTML = `
+      <span class="dep-sent-title">${totalSents > 1 ? `S${sIdx + 1}: ` : ""}${escapeHtml(sent.text)}</span>
+      <span class="dep-sent-meta">${nodes.length} UD tokens${mwtMeta}${rootNode ? ` · root=${escapeHtml(rootNode.form)}` : ""}</span>
+    `;
+    card.appendChild(header);
+
+    const svgWrap = document.createElement("div");
+    svgWrap.className = "dep-svg-wrap";
+
+    const detailStrip = document.createElement("div");
+    detailStrip.className = "dep-detail-strip";
+
+    const selectedInitId = rootNode ? rootNode.id : null;
+    const svg = buildDependencySvg(sent, selectedInitId, (nodeId) => {
+      renderDepTokenDetail(detailStrip, sent, nodeId);
+    });
+    svgWrap.appendChild(svg);
+    card.appendChild(svgWrap);
+
+    if (selectedInitId !== null) {
+      renderDepTokenDetail(detailStrip, sent, selectedInitId);
+    }
+    card.appendChild(detailStrip);
+
+    return card;
+  }
+
+  function buildDependencySvg(sent, initialSelectedId, onSelectNode) {
+    const nodes = sent.nodes || [];
+    const mwtSpans = sent.mwtSpans || [];
+
+    const padX = 24;
+    const colGap = 14;
+    const boxH = 54;
+
+    const layoutById = {};
+    let curX = padX;
+    nodes.forEach((n) => {
+      const formW = String(n.form || "").length * 8.4 + 22;
+      const uposW = String(n.upos || "").length * 7.2 + 18;
+      const w = Math.min(220, Math.max(70, Math.round(Math.max(formW, uposW))));
+      layoutById[n.id] = { x: curX, w, cx: curX + w / 2, node: n };
+      curX += w + colGap;
+    });
+    const svgW = Math.max(320, curX - colGap + padX);
+
+    // Build and layer non-root arcs so nested arcs stack cleanly without colliding
+    const arcs = [];
+    nodes.forEach((n) => {
+      if (n.headId > 0 && layoutById[n.headId]) {
+        const left = Math.min(n.headId, n.id);
+        const right = Math.max(n.headId, n.id);
+        arcs.push({
+          head: n.headId,
+          dep: n.id,
+          deprel: n.deprel,
+          cat: classifyDeprel(n.deprel),
+          left,
+          right,
+          span: right - left,
+          level: 1
+        });
+      }
+    });
+
+    arcs.sort((a, b) => a.span - b.span || a.left - b.left);
+    const placed = [];
+    arcs.forEach((arc) => {
+      let maxLvl = 0;
+      for (const p of placed) {
+        const overlaps = p.left < arc.right && p.right > arc.left;
+        if (overlaps && p.level > maxLvl) {
+          maxLvl = p.level;
+        }
+      }
+      arc.level = maxLvl + 1;
+      placed.push(arc);
+    });
+
+    const maxLevel = placed.reduce((m, a) => Math.max(m, a.level), 1);
+    const levelStep = 34;
+    const topPad = 42;
+    const arcBaseY = topPad + maxLevel * levelStep + 14;
+    const boxY = arcBaseY + 6;
+    const mwtExtra = mwtSpans.length > 0 ? 34 : 12;
+    const svgH = boxY + boxH + mwtExtra;
+
+    const svg = svgEl("svg", {
+      class: "dep-svg",
+      width: svgW,
+      height: svgH,
+      viewBox: `0 0 ${svgW} ${svgH}`
+    });
+
+    const arcsLayer = svgEl("g", { class: "dep-arcs-layer" });
+    const tokensLayer = svgEl("g", { class: "dep-tokens-layer" });
+    const mwtLayer = svgEl("g", { class: "dep-mwt-layer" });
+
+    // Root indicator arcs (headId === 0)
+    nodes.forEach((n) => {
+      if (n.headId !== 0) return;
+      const cx = layoutById[n.id].cx;
+      const g = svgEl("g", {
+        class: "dep-arc dep-cat-root",
+        "data-head": 0,
+        "data-dep": n.id
+      });
+      g.appendChild(
+        svgEl("line", {
+          class: "dep-arc-path",
+          x1: cx,
+          y1: 22,
+          x2: cx,
+          y2: arcBaseY - 5
+        })
+      );
+      g.appendChild(
+        svgEl("polygon", {
+          class: "dep-arc-arrow",
+          points: `${cx},${arcBaseY + 1} ${cx - 4.5},${arcBaseY - 7} ${cx + 4.5},${arcBaseY - 7}`
+        })
+      );
+      const pillW = 42;
+      g.appendChild(
+        svgEl("rect", {
+          class: "dep-arc-label-bg",
+          x: cx - pillW / 2,
+          y: 4,
+          width: pillW,
+          height: 17,
+          rx: 8.5
+        })
+      );
+      g.appendChild(
+        svgEl("text", { class: "dep-arc-label", x: cx, y: 12.5 }, n.deprel || "root")
+      );
+      arcsLayer.appendChild(g);
+    });
+
+    // Non-root dependency arcs
+    placed.forEach((arc) => {
+      const headLayout = layoutById[arc.head];
+      const depLayout = layoutById[arc.dep];
+      const dir = arc.dep > arc.head ? 1 : -1;
+      const x1 = headLayout.cx + dir * Math.min(10, headLayout.w * 0.14);
+      const x2 = depLayout.cx;
+      const targetApexY = arcBaseY - arc.level * levelStep;
+      // Cubic Bezier passing exactly through ((x1+x2)/2, targetApexY) at t=0.5
+      const cpY = (4 * targetApexY - arcBaseY) / 3;
+      const midX = (x1 + x2) / 2;
+
+      const g = svgEl("g", {
+        class: `dep-arc dep-cat-${arc.cat}`,
+        "data-head": arc.head,
+        "data-dep": arc.dep
+      });
+      g.appendChild(
+        svgEl("path", {
+          class: "dep-arc-path",
+          d: `M ${x1} ${arcBaseY} C ${x1} ${cpY}, ${x2} ${cpY}, ${x2} ${arcBaseY - 5}`
+        })
+      );
+      g.appendChild(
+        svgEl("polygon", {
+          class: "dep-arc-arrow",
+          points: `${x2},${arcBaseY + 1} ${x2 - 4.5},${arcBaseY - 7} ${x2 + 4.5},${arcBaseY - 7}`
+        })
+      );
+
+      const labelText = arc.deprel || "dep";
+      const pillW = Math.max(30, Math.round(labelText.length * 6.8 + 12));
+      const pillH = 17;
+      g.appendChild(
+        svgEl("rect", {
+          class: "dep-arc-label-bg",
+          x: midX - pillW / 2,
+          y: targetApexY - pillH / 2,
+          width: pillW,
+          height: pillH,
+          rx: 8.5
+        })
+      );
+      g.appendChild(
+        svgEl("text", { class: "dep-arc-label", x: midX, y: targetApexY + 0.5 }, labelText)
+      );
+      arcsLayer.appendChild(g);
+    });
+
+    // Token boxes
+    let selectedId = initialSelectedId;
+    nodes.forEach((n) => {
+      const l = layoutById[n.id];
+      const classes = ["dep-token"];
+      if (n.headId === 0) classes.push("is-root");
+      if (n.id === selectedId) classes.push("is-selected");
+
+      const g = svgEl("g", {
+        class: classes.join(" "),
+        "data-id": n.id
+      });
+      g.appendChild(
+        svgEl("rect", {
+          class: "dep-token-box",
+          x: l.x,
+          y: boxY,
+          width: l.w,
+          height: boxH
+        })
+      );
+      g.appendChild(
+        svgEl("text", { class: "dep-token-id", x: l.cx, y: boxY + 12 }, `#${n.id}`)
+      );
+      g.appendChild(
+        svgEl("text", { class: "dep-token-form", x: l.cx, y: boxY + 30 }, n.form)
+      );
+      g.appendChild(
+        svgEl("text", { class: "dep-token-upos", x: l.cx, y: boxY + 46 }, n.upos)
+      );
+      tokensLayer.appendChild(g);
+    });
+
+    // MWT span brackets under split tokens (e.g. 1-2 İstanbul'daydı)
+    mwtSpans.forEach((span) => {
+      const startL = layoutById[span.startId];
+      const endL = layoutById[span.endId];
+      if (!startL || !endL) return;
+      const xStart = startL.x + 6;
+      const xEnd = endL.x + endL.w - 6;
+      const yTop = boxY + boxH + 4;
+      const yBot = yTop + 8;
+      mwtLayer.appendChild(
+        svgEl("path", {
+          class: "dep-mwt-line",
+          d: `M ${xStart} ${yTop} L ${xStart} ${yBot} L ${xEnd} ${yBot} L ${xEnd} ${yTop}`
+        })
+      );
+      mwtLayer.appendChild(
+        svgEl(
+          "text",
+          {
+            class: "dep-mwt-label",
+            x: (xStart + xEnd) / 2,
+            y: yBot + 14
+          },
+          `${span.startId}-${span.endId} ${span.form}`
+        )
+      );
+    });
+
+    svg.appendChild(arcsLayer);
+    svg.appendChild(tokensLayer);
+    svg.appendChild(mwtLayer);
+
+    // Interactive focus/highlight & click selection
+    const allArcEls = Array.from(arcsLayer.querySelectorAll(".dep-arc"));
+    const allTokEls = Array.from(tokensLayer.querySelectorAll(".dep-token"));
+
+    function clearFocus() {
+      svg.classList.remove("has-focus");
+      allArcEls.forEach((a) => a.classList.remove("focused"));
+      allTokEls.forEach((t) => t.classList.remove("focused"));
+    }
+
+    function focusToken(tokenId) {
+      svg.classList.add("has-focus");
+      const relatedToks = new Set([tokenId]);
+      allArcEls.forEach((a) => {
+        const h = Number(a.dataset.head);
+        const d = Number(a.dataset.dep);
+        const hit = h === tokenId || d === tokenId;
+        a.classList.toggle("focused", hit);
+        if (hit) {
+          if (h > 0) relatedToks.add(h);
+          relatedToks.add(d);
+        }
+      });
+      allTokEls.forEach((t) => {
+        t.classList.toggle("focused", relatedToks.has(Number(t.dataset.id)));
+      });
+    }
+
+    function focusArc(headId, depId) {
+      svg.classList.add("has-focus");
+      allArcEls.forEach((a) => {
+        const hit = Number(a.dataset.head) === headId && Number(a.dataset.dep) === depId;
+        a.classList.toggle("focused", hit);
+      });
+      allTokEls.forEach((t) => {
+        const id = Number(t.dataset.id);
+        t.classList.toggle("focused", id === headId || id === depId);
+      });
+    }
+
+    function selectToken(tokenId) {
+      selectedId = tokenId;
+      allTokEls.forEach((t) => {
+        t.classList.toggle("is-selected", Number(t.dataset.id) === tokenId);
+      });
+      onSelectNode(tokenId);
+    }
+
+    allTokEls.forEach((t) => {
+      const id = Number(t.dataset.id);
+      t.addEventListener("mouseenter", () => focusToken(id));
+      t.addEventListener("mouseleave", clearFocus);
+      t.addEventListener("click", () => selectToken(id));
+    });
+
+    allArcEls.forEach((a) => {
+      const h = Number(a.dataset.head);
+      const d = Number(a.dataset.dep);
+      a.addEventListener("mouseenter", () => focusArc(h, d));
+      a.addEventListener("mouseleave", clearFocus);
+      a.addEventListener("click", () => selectToken(d));
+    });
+
+    return svg;
+  }
+
+  function renderDepTokenDetail(container, sent, nodeId) {
+    const nodes = sent.nodes || [];
+    const node = nodes.find((n) => n.id === nodeId);
+    if (!node) {
+      container.innerHTML = `<span class="io-meta">Click any token to inspect its syntactic and morphological features.</span>`;
+      return;
+    }
+    const headNode = node.headId > 0 ? nodes.find((n) => n.id === node.headId) : null;
+    const headDesc =
+      node.headId === 0
+        ? "ROOT (0)"
+        : `#${node.headId} ${headNode ? headNode.form : ""}`;
+
+    const children = nodes.filter((n) => n.headId === node.id);
+    const childrenHtml =
+      children.length > 0
+        ? children
+            .map(
+              (c) =>
+                `<span class="dep-feat-pill">${escapeHtml(c.deprel)}→#${c.id} ${escapeHtml(c.form)}</span>`
+            )
+            .join("")
+        : `<span class="io-meta">none</span>`;
+
+    const featsList =
+      node.feats && node.feats !== "_" ? node.feats.split("|") : [];
+    const featsHtml =
+      featsList.length > 0
+        ? featsList.map((f) => `<span class="dep-feat-pill">${escapeHtml(f)}</span>`).join("")
+        : `<span class="io-meta">_</span>`;
+
+    const cat = classifyDeprel(node.deprel);
+    container.innerHTML = `
+      <span class="dep-detail-item"><span class="dep-detail-label">Token</span><strong>#${node.id} ${escapeHtml(node.form)}</strong></span>
+      <span class="dep-detail-item"><span class="dep-detail-label">Lemma</span><code>${escapeHtml(node.lemma)}</code></span>
+      <span class="dep-detail-item"><span class="dep-detail-label">UPOS</span><code>${escapeHtml(node.upos)}</code></span>
+      ${node.xpos && node.xpos !== "_" ? `<span class="dep-detail-item"><span class="dep-detail-label">XPOS</span><code>${escapeHtml(node.xpos)}</code></span>` : ""}
+      <span class="dep-detail-item"><span class="dep-detail-label">Relation</span><span class="dep-legend-pill cat-${cat}">${escapeHtml(node.deprel)}</span> <span class="io-meta">← ${escapeHtml(headDesc)}</span></span>
+      <span class="dep-detail-item"><span class="dep-detail-label">Feats</span><span class="dep-feat-pills">${featsHtml}</span></span>
+      <span class="dep-detail-item"><span class="dep-detail-label">Dependents</span><span class="dep-feat-pills">${childrenHtml}</span></span>
+    `;
+  }
+
+  function renderDependencyConllu(data) {
+    const sents = data.sentences || [];
+    const rows = [];
+    sents.forEach((sent, sIdx) => {
+      const mwtByStart = {};
+      (sent.mwtSpans || []).forEach((m) => {
+        mwtByStart[m.startId] = m;
+      });
+      if (sents.length > 1) {
+        rows.push(`
+          <tr>
+            <td colspan="9" class="mono" style="background: var(--surface-subtle); font-weight: 700;">
+              # sent ${sIdx + 1}: ${escapeHtml(sent.text)}
+            </td>
+          </tr>
+        `);
+      }
+      (sent.nodes || []).forEach((n) => {
+        const mwt = mwtByStart[n.id];
+        if (mwt) {
+          rows.push(`
+            <tr style="background: var(--violet-soft);">
+              <td class="mono"><strong>${mwt.startId}-${mwt.endId}</strong></td>
+              <td class="cand-surf">${escapeHtml(mwt.form)}</td>
+              <td class="mono">_</td>
+              <td class="mono">_</td>
+              <td class="mono">_</td>
+              <td class="mono">_</td>
+              <td class="mono">_</td>
+              <td class="mono">_</td>
+              <td class="mono">MWT</td>
+            </tr>
+          `);
+        }
+        const cat = classifyDeprel(n.deprel);
+        rows.push(`
+          <tr class="${n.headId === 0 ? "winner-row" : ""}">
+            <td class="mono">${n.id}</td>
+            <td class="cand-surf">${escapeHtml(n.form)}</td>
+            <td class="mono">${escapeHtml(n.lemma)}</td>
+            <td class="mono">${escapeHtml(n.upos)}</td>
+            <td class="mono">${escapeHtml(n.xpos)}</td>
+            <td class="mono">${escapeHtml(n.feats)}</td>
+            <td class="mono">${n.headId}</td>
+            <td><span class="dep-legend-pill cat-${cat}">${escapeHtml(n.deprel)}</span></td>
+            <td class="mono">${escapeHtml(n.misc)}</td>
+          </tr>
+        `);
+      });
+    });
+
+    depConlluTableWrap.innerHTML = `
+      <table class="cand-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>FORM</th>
+            <th>LEMMA</th>
+            <th>UPOS</th>
+            <th>XPOS</th>
+            <th>FEATS</th>
+            <th>HEAD</th>
+            <th>DEPREL</th>
+            <th>MISC</th>
+          </tr>
+        </thead>
+        <tbody>${rows.join("")}</tbody>
+      </table>
+    `;
+    depConlluRaw.textContent = data.conllu || "";
+  }
+
+  // ==================== TAB 5: TOKENIZER ====================
   async function runTokenize() {
     const text = tokInput.value;
     if (!text.trim()) {
@@ -1015,6 +1582,9 @@
   sendToMorphBtn.addEventListener("click", () =>
     openInMorphology(state.lastResponse && state.lastResponse.normalizedText)
   );
+  sendToDepBtn.addEventListener("click", () =>
+    openInDependency(state.lastResponse && state.lastResponse.normalizedText)
+  );
 
   // Deasciifiers Event Listeners
   deascInput.addEventListener("input", runDeasciify);
@@ -1061,6 +1631,22 @@
   deascToMorphBtn.addEventListener("click", () =>
     openInMorphology(state.lastDeascResponse && state.lastDeascResponse.deasciifiedText)
   );
+  deascToDepBtn.addEventListener("click", () =>
+    openInDependency(state.lastDeascResponse && state.lastDeascResponse.deasciifiedText)
+  );
+
+  // Dependency Tree Event Listeners
+  depInput.addEventListener("input", runDependency);
+  depShowConlluToggle.addEventListener("change", () => {
+    if (state.lastDepResponse) renderDependencyResponse(state.lastDepResponse);
+  });
+  clearDepBtn.addEventListener("click", () => {
+    depInput.value = "";
+    runDependency();
+    depInput.focus();
+  });
+  depToMorphBtn.addEventListener("click", () => openInMorphology(depInput.value.trim()));
+  bindCopyButton(copyDepConlluBtn, () => (state.lastDepResponse ? state.lastDepResponse.conllu : ""));
 
   // Morphology & Tokenizer Event Listeners
   morphInput.addEventListener("input", runMorphology);
