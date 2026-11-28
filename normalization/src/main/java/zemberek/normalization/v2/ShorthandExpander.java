@@ -267,6 +267,9 @@ final class ShorthandExpander {
 
     Map<String, List<String>> tmp = new HashMap<>(16_384);
     for (String w : topWords) {
+      if (morph.isVulgarOnly(w)) {
+        continue;
+      }
       String skExact = asciiConsonantSkeleton(w, false);
       String skNoSoftG = asciiConsonantSkeleton(w, true);
       String skCollapsed = SingleTokenRewriteGenerator.squeezeRuns(skExact, 1);

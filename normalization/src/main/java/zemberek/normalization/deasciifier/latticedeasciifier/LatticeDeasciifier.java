@@ -376,8 +376,13 @@ public final class LatticeDeasciifier {
       }
 
       int maxCharCands = candidates.isEmpty() ? 2 : 1;
+      String inputLower = TurkishTextCodec.toTurkishLower(token.original());
+      boolean hasCleanCandidates = !candidates.isEmpty();
       for (ScoredSurface cs :
           model.characterModel().decodeTopCandidates(text, token, maxCharCands)) {
+        if (shouldSkipVulgarSurface(cs.surface(), inputLower, hasCleanCandidates)) {
+          break;
+        }
         if (TurkishTextCodec.isCompatibleWithInput(token.original(), cs.surface(), pinDotlessI)) {
           Candidate.addIfSurfaceAbsent(candidates, Candidate.oov(cs.surface(), 0));
         }
@@ -407,13 +412,22 @@ public final class LatticeDeasciifier {
     return new TokenLattice(candidates, logPriors, charScores);
   }
 
-  private static void mergeConfusionCandidates(
+  private boolean shouldSkipVulgarSurface(
+      String surface, String inputLower, boolean hasCleanCandidates) {
+    return (!surface.equals(inputLower) || hasCleanCandidates)
+        && morphGenerator.isVulgarSurface(surface);
+  }
+
+  private void mergeConfusionCandidates(
       List<Candidate> candidates, ConfusionSet confusion, String inputOriginal, boolean pinDotlessI) {
     if (confusion == null) {
       return;
     }
+    String inputLower = TurkishTextCodec.toTurkishLower(inputOriginal);
+    boolean hasCleanCandidates = !candidates.isEmpty();
     for (String surf : confusion.surfaces()) {
-      if (TurkishTextCodec.isCompatibleWithInput(inputOriginal, surf, pinDotlessI)) {
+      if (TurkishTextCodec.isCompatibleWithInput(inputOriginal, surf, pinDotlessI)
+          && !shouldSkipVulgarSurface(surf, inputLower, hasCleanCandidates)) {
         Candidate.addIfSurfaceAbsent(candidates, Candidate.oov(surf, 0));
       }
     }

@@ -62,7 +62,8 @@ final class LatticeMorphologySupport {
       byte verbPolarity,
       boolean isRegular,
       boolean isProperOrAbbr,
-      boolean isStrictRegularCommon) {}
+      boolean isStrictRegularCommon,
+      boolean isVulgarOnly) {}
 
   record CachedMorphItem(
       String fixedProperSurface,
@@ -138,10 +139,19 @@ final class LatticeMorphologySupport {
     boolean seenNegVerb = false;
     boolean seenPosVerb = false;
     boolean seenNonVerb = false;
+    boolean seenVulgar = false;
+    boolean seenCleanLexical = false;
 
     for (SingleAnalysis a : strictMorphology.analyze(query)) {
       if (a.isUnknown()) {
         continue;
+      }
+      if (!a.isRuntime()) {
+        if (isVulgarAnalysis(a)) {
+          seenVulgar = true;
+        } else {
+          seenCleanLexical = true;
+        }
       }
       if (bestAny == null) {
         bestAny = a;
@@ -172,7 +182,8 @@ final class LatticeMorphologySupport {
     if (!seenNonVerb && seenNegVerb != seenPosVerb) {
       polarity = seenNegVerb ? (byte) -1 : (byte) 1;
     }
-    return buildMorphSummary(chosen, ap, bestReg != null, polarity);
+    return buildMorphSummary(
+        chosen, ap, bestReg != null, polarity, seenVulgar && !seenCleanLexical);
   }
 
   private MorphSummary unknownMorphSummary(String wordLower, boolean hasApostrophe) {
@@ -185,11 +196,16 @@ final class LatticeMorphologySupport {
         (byte) 0,
         cleanAttested,
         hasApostrophe,
+        false,
         false);
   }
 
   private static MorphSummary buildMorphSummary(
-      SingleAnalysis chosen, int apostropheIdx, boolean hasRegularAnalysis, byte polarity) {
+      SingleAnalysis chosen,
+      int apostropheIdx,
+      boolean hasRegularAnalysis,
+      byte polarity,
+      boolean isVulgarOnly) {
     DictionaryItem item = chosen.getDictionaryItem();
     PrimaryPos finalPos = chosen.getPos();
     Morpheme lastCase = null;
@@ -220,7 +236,8 @@ final class LatticeMorphologySupport {
         polarity,
         hasRegularAnalysis || properNoQuoteDerivative,
         takesApostrophe,
-        apostropheIdx <= 0 && hasRegularAnalysis);
+        apostropheIdx <= 0 && hasRegularAnalysis,
+        isVulgarOnly);
   }
 
   private static byte classifySyntaxRole(PrimaryPos rootPos, PrimaryPos finalPos) {
@@ -276,6 +293,30 @@ final class LatticeMorphologySupport {
     return !wordLower.isEmpty()
         && wordLower.indexOf('\'') < 0
         && summarizeMorph(wordLower).isStrictRegularCommon;
+  }
+
+  boolean isVulgarOnly(String wordLower) {
+    return !wordLower.isEmpty() && summarizeMorph(wordLower).isVulgarOnly;
+  }
+
+  boolean containsVulgarWord(String normLower) {
+    if (normLower.indexOf(' ') < 0) {
+      return isVulgarOnly(normLower);
+    }
+    for (String part : normLower.split(" ")) {
+      if (isVulgarOnly(part)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static boolean isVulgarAnalysis(SingleAnalysis a) {
+    DictionaryItem item = a.getDictionaryItem();
+    return item != null
+        && (item.hasAttribute(RootAttribute.Vulgar)
+            || (item.getReferenceItem() != null
+                && item.getReferenceItem().hasAttribute(RootAttribute.Vulgar)));
   }
 
   boolean isStrictProperOrAbbrOnly(String wordLower) {
@@ -493,7 +534,8 @@ final class LatticeMorphologySupport {
     for (SingleAnalysis a : exactInformalMorphology.analyze(query)) {
       if (!a.isKnownLexical()
           || !a.containsInformalMorpheme()
-          || isExtInterjection(a.getDictionaryItem())) {
+          || isExtInterjection(a.getDictionaryItem())
+          || isVulgarAnalysis(a)) {
         continue;
       }
       Result conv = informalConverter.convert(query, a);
@@ -510,7 +552,7 @@ final class LatticeMorphologySupport {
   void forEachAsciiRealization(
       String query, String rawForDiacCheck, AsciiRealizationConsumer consumer) {
     for (SingleAnalysis a : informalAsciiMorphology.analyze(query)) {
-      if (!a.isKnownLexical()) {
+      if (!a.isKnownLexical() || isVulgarAnalysis(a)) {
         continue;
       }
       DictionaryItem item = a.getDictionaryItem();

@@ -167,5 +167,21 @@ public class SpanLatticePerceptronNormalizerTest {
     Assert.assertEquals(
         "Ürün harika. Çok beğendim.",
         loaded.normalize("urun harika. cok begendim."));
+
+    // Clean diacritic restoration on vulgar ASCII homograph vs never synthesizing vulgar words
+    Assert.assertEquals("elmanın suyunu sık.", loaded.normalize("elmanin suyunu sik."));
+    Assert.assertEquals("elbise çok şık duruyor.", loaded.normalize("elbise cok sik duruyor."));
+    Assert.assertEquals("çok canım sıkıldı.", loaded.normalize("cok canim sikildi."));
+    Assert.assertEquals("asansörde sıkıştık.", loaded.normalize("asansorde sikistik."));
+    Assert.assertEquals("Çocuğun kemerini sık.", loaded.normalize("Çocuğun kemerini sik."));
+    Assert.assertEquals("bok gibi olmuş.", loaded.normalize("bok gibi olmus."));
+
+    String nonVulgarOut =
+        loaded.normalize("orosp pezevnk sikmk gotun tasak boook.").toLowerCase(java.util.Locale.forLanguageTag("tr"));
+    for (String banned : new String[] {"orospu", "pezevenk", "sikmek", "götün", "taşak", "bok"}) {
+      Assert.assertFalse(
+          "Normalizer must not synthesize vulgar word '" + banned + "' in '" + nonVulgarOut + "'",
+          nonVulgarOut.contains(banned));
+    }
   }
 }

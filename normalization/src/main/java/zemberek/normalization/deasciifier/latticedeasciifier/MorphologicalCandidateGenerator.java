@@ -262,30 +262,21 @@ public final class MorphologicalCandidateGenerator {
     if (analysis.isEmpty()) {
       return Collections.emptyList();
     }
+
     CandidateCollector collector = new CandidateCollector(4);
     for (SingleAnalysis sa : analysis) {
-      if (sa.isUnknown()) {
+      if (sa.isUnknown() || isVulgarItem(sa.getDictionaryItem()) || isFalseFriendAnalysis(sa)) {
         continue;
       }
       DictionaryItem item = sa.getDictionaryItem();
-      // Filter known Zemberek lexicon false-friends on un-apostrophized plain words:
-      // 1) Inflected abbreviations without apostrophe ("tuslarla" = [Tus:Abbrv]+lar+la, "komsu" = [Ko:Abbrv]+msu)
-      // 2) Proper nouns deriving into verbs without apostrophe ("acmış" = [Ac:Prop]+Zero->Verb+mış)
-      // 3) English/ASCII proper nouns whose 'I' was lowercased into 'ı' in proper-from-corpus.dict ("ıstanbul")
-      if (item.secondaryPos == SecondaryPos.Abbreviation && sa.getMorphemes().size() > 1) {
-        continue;
-      }
-      if (item.secondaryPos == SecondaryPos.ProperNoun && sa.getPos() == PrimaryPos.Verb) {
-        continue;
-      }
-      if (isCorruptedDotlessProperNoun(item)) {
-        continue;
-      }
-
+      boolean informal = sa.containsInformalMorpheme();
       for (WordGenerator.Result generated : generatorFor(sa).generate(item, sa.getMorphemes())) {
         String surf = generated.surface.toLowerCase(Turkish.LOCALE);
         if (surf.length() != asciiLower.length()
             || !TurkishTextCodec.toAsciiLower(surf).equals(asciiLower)) {
+          continue;
+        }
+        if (informal && isVulgarSurface(surf)) {
           continue;
         }
         collector.register(surf, sa, false, 0);
@@ -384,12 +375,7 @@ public final class MorphologicalCandidateGenerator {
         && !(strictMorphology.getMorphotactics() instanceof InformalTurkishMorphotactics)) {
       String norm = TurkishMorphology.normalizeForAnalysis(query);
       if (!norm.isEmpty()) {
-        RuleBasedAnalyzer fallback = strictInformalFallback;
-        if (fallback == null) {
-          fallback = RuleBasedAnalyzer.instance(asciiInformalAnalyzer.getMorphotactics());
-          strictInformalFallback = fallback;
-        }
-        for (SingleAnalysis sa : fallback.analyze(norm)) {
+        for (SingleAnalysis sa : ensureStrictInformalFallback().analyze(norm)) {
           if (isLexiconAnalysis(sa)
               && (best == null
                   || preferenceScore(sa, hasCircumflex) > preferenceScore(best, hasCircumflex))) {
@@ -445,7 +431,7 @@ public final class MorphologicalCandidateGenerator {
     List<SingleAnalysis> analysis = analyzeAsciiInformal(withoutQuoteAscii);
     CandidateCollector collector = new CandidateCollector(4);
     for (SingleAnalysis sa : analysis) {
-      if (sa.isUnknown()) {
+      if (sa.isUnknown() || isVulgarItem(sa.getDictionaryItem())) {
         continue;
       }
       String saStemAscii = TurkishTextCodec.toAsciiLower(sa.getStemAndEnding().stem);
@@ -829,6 +815,67 @@ public final class MorphologicalCandidateGenerator {
       }
     }
     return best;
+  }
+
+  /**
+   * Returns {@code true} when {@code lowerSurface} is a known vulgar wordform with no non-vulgar
+   * lexicon reading at the same formality level.
+   */
+  public boolean isVulgarSurface(String lowerSurface) {
+    if (lowerSurface == null || lowerSurface.length() < 2) {
+      return false;
+    }
+    String query = TurkishMorphology.normalizeForAnalysis(lowerSurface).replace("'", "");
+    if (query.isEmpty()) {
+      return false;
+    }
+    boolean sawFormalVulgar = false;
+    boolean sawInformalVulgar = false;
+    boolean sawInformalClean = false;
+    for (SingleAnalysis sa : ensureStrictInformalFallback().analyze(query)) {
+      if (!isLexiconAnalysis(sa) || isFalseFriendAnalysis(sa)) {
+        continue;
+      }
+      boolean vulgar = isVulgarItem(sa.getDictionaryItem());
+      if (!sa.containsInformalMorpheme()) {
+        if (!vulgar) {
+          return false;
+        }
+        sawFormalVulgar = true;
+      } else if (vulgar) {
+        sawInformalVulgar = true;
+      } else {
+        sawInformalClean = true;
+      }
+    }
+    return sawFormalVulgar || (sawInformalVulgar && !sawInformalClean);
+  }
+
+  private RuleBasedAnalyzer ensureStrictInformalFallback() {
+    RuleBasedAnalyzer fallback = strictInformalFallback;
+    if (fallback == null) {
+      fallback = RuleBasedAnalyzer.instance(asciiInformalAnalyzer.getMorphotactics());
+      strictInformalFallback = fallback;
+    }
+    return fallback;
+  }
+
+  // Filter known Zemberek lexicon false-friends on un-apostrophized plain words:
+  // 1) Inflected abbreviations without apostrophe ("tuslarla" = [Tus:Abbrv]+lar+la, "komsu" = [Ko:Abbrv]+msu)
+  // 2) Proper nouns deriving into verbs without apostrophe ("acmış" = [Ac:Prop]+Zero->Verb+mış)
+  // 3) English/ASCII proper nouns whose 'I' was lowercased into 'ı' in proper-from-corpus.dict ("ıstanbul")
+  private static boolean isFalseFriendAnalysis(SingleAnalysis sa) {
+    DictionaryItem item = sa.getDictionaryItem();
+    return (item.secondaryPos == SecondaryPos.Abbreviation && sa.getMorphemes().size() > 1)
+        || (item.secondaryPos == SecondaryPos.ProperNoun && sa.getPos() == PrimaryPos.Verb)
+        || isCorruptedDotlessProperNoun(item);
+  }
+
+  private static boolean isVulgarItem(DictionaryItem item) {
+    return item != null
+        && (item.hasAttribute(RootAttribute.Vulgar)
+            || (item.getReferenceItem() != null
+                && item.getReferenceItem().hasAttribute(RootAttribute.Vulgar)));
   }
 
   private static boolean isLexiconAnalysis(SingleAnalysis sa) {
