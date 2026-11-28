@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 import zemberek.core.turkish.PrimaryPos;
 import zemberek.core.turkish.SecondaryPos;
 import zemberek.morphology.analysis.SingleAnalysis.MorphemeData;
+import zemberek.morphology.analysis.format.OflazerFormatter;
 import zemberek.morphology.lexicon.DictionaryItem;
 import zemberek.morphology.morphotactics.Morpheme;
 
@@ -84,6 +85,15 @@ public class AnalysisFormatters {
    * </pre>
    */
   public static AnalysisFormatter SURFACE_SEQUENCE = new OnlySurfaceFormatter();
+
+  /**
+   * Strict Kemal Oflazer / METU-Sabancı morphological formatter reconstructing unmutated dictionary
+   * lemmas, zero-surface nominal {@code +Pnon}/{@code +Nom} slots, verbal {@code +Pos} polarity,
+   * {@code +Unable -> ^DB+Verb+Able+Neg} expansion, and secondary POS mappings.
+   * See {@link OflazerFormatter} for {@code OFLAZER_94}, {@code SAK_2008}, and
+   * {@code STARLANG_UPPER} dialect profiles.
+   */
+  public static final AnalysisFormatter OFLAZER_STRICT = OflazerFormatter.metuSabanci();
 
   static AnalysisFormatter lexicalSequenceFormatter() {
     return analysis -> analysis.getMorphemeDataList().stream()
