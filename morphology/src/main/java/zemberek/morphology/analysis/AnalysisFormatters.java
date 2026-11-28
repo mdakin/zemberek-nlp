@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 import zemberek.core.turkish.PrimaryPos;
 import zemberek.core.turkish.SecondaryPos;
 import zemberek.morphology.analysis.SingleAnalysis.MorphemeData;
+import zemberek.morphology.analysis.format.ConlluFormatter;
 import zemberek.morphology.analysis.format.OflazerFormatter;
 import zemberek.morphology.lexicon.DictionaryItem;
 import zemberek.morphology.morphotactics.Morpheme;
@@ -94,6 +95,13 @@ public class AnalysisFormatters {
    * {@code STARLANG_UPPER} dialect profiles.
    */
   public static final AnalysisFormatter OFLAZER_STRICT = OflazerFormatter.metuSabanci();
+
+  /**
+   * Universal Dependencies v2 ({@code UD_Turkish-BOUN} / UD Turkic Harmonized) single-token
+   * formatter ({@code LEMMA\tUPOS\tXPOS\tFEATS}). For full 10-column sentence {@code CoNLL-U}
+   * export with autonomous Multi-Word Token splitting, use {@link ConlluFormatter}.
+   */
+  public static final AnalysisFormatter CONLLU_TOKEN = ConlluFormatter.bounDefault();
 
   static AnalysisFormatter lexicalSequenceFormatter() {
     return analysis -> analysis.getMorphemeDataList().stream()
